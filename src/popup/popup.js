@@ -109,6 +109,101 @@ function setupEventListeners() {
   console.log('Event listeners setup complete');
 }
 
+/* ---------------------- Era selection (US-1.3) ---------------------- */
+const ERA_KEY = 'selectedEra';
+
+function initEraSelection() {
+  const eraOptions = Array.from(document.querySelectorAll('.era-card'));
+
+  // Initialize selection from localStorage (persisted) or settings
+  const stored = localStorage.getItem(ERA_KEY);
+  let initial = stored || currentEra || '90s';
+
+  // Normalize values (match data-era attributes)
+  initial = initial.toLowerCase();
+
+  eraOptions.forEach((btn) => {
+    const era = btn.getAttribute('data-era').toLowerCase();
+    if (era === initial) {
+      setEraSelected(btn, true);
+      btn.tabIndex = 0;
+    } else {
+      setEraSelected(btn, false);
+      btn.tabIndex = -1;
+    }
+
+    btn.addEventListener('click', () => {
+      eraOptions.forEach(b => setEraSelected(b, false));
+      setEraSelected(btn, true);
+      // update currentEra display
+      currentEra = btn.getAttribute('data-era');
+      document.getElementById('current-era').textContent = currentEra;
+      document.getElementById('approval-era').textContent = currentEra;
+    });
+
+    // Keyboard navigation within the grid
+    btn.addEventListener('keydown', (e) => handleEraKeydown(e, eraOptions));
+  });
+
+  // Set as default button
+  const setBtn = document.getElementById('set-default-era');
+  if (setBtn) {
+    setBtn.addEventListener('click', () => {
+      const selected = document.querySelector('.era-card[aria-checked="true"]');
+      if (selected) {
+        const era = selected.getAttribute('data-era');
+        localStorage.setItem(ERA_KEY, era);
+        // notify background of settings change if desired
+        sendMessage({ type: 'SET_SETTINGS', payload: { selectedEra: era } }).catch(() => {});
+        document.getElementById('status-indicator').textContent = 'Default set ✓';
+        setTimeout(() => { document.getElementById('status-indicator').textContent = 'Ready'; }, 1200);
+      }
+    });
+  }
+}
+
+function setEraSelected(button, selected) {
+  button.setAttribute('aria-checked', selected ? 'true' : 'false');
+  if (selected) {
+    button.classList.add('selected');
+    button.tabIndex = 0;
+    button.focus();
+  } else {
+    button.classList.remove('selected');
+    button.tabIndex = -1;
+  }
+}
+
+function handleEraKeydown(e, eraOptions) {
+  const key = e.key;
+  const current = e.currentTarget;
+  const idx = eraOptions.indexOf(current);
+
+  if (key === 'ArrowRight' || key === 'ArrowDown') {
+    e.preventDefault();
+    const next = eraOptions[(idx + 1) % eraOptions.length];
+    eraOptions.forEach(b => setEraSelected(b, false));
+    setEraSelected(next, true);
+  } else if (key === 'ArrowLeft' || key === 'ArrowUp') {
+    e.preventDefault();
+    const prev = eraOptions[(idx - 1 + eraOptions.length) % eraOptions.length];
+    eraOptions.forEach(b => setEraSelected(b, false));
+    setEraSelected(prev, true);
+  } else if (key === 'Enter' || key === ' ') {
+    e.preventDefault();
+    // Treat as click
+    current.click();
+  }
+}
+
+// Initialize era UI after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  // small timeout to ensure existing init runs first
+  setTimeout(() => initEraSelection(), 0);
+});
+
+/* ---------------------- End Era selection ---------------------- */
+
 /**
  * Approve the current style
  */

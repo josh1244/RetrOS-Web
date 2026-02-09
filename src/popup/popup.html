@@ -64,11 +64,34 @@
         <button id="regenerate-btn" class="btn btn-primary" title="Regenerate style with feedback">🔄 Regenerate & Apply</button>
       </section>
 
-      <!-- Placeholder for Era Selection (US-1.3) -->
-      <section id="era-selection" class="era-selection" style="display: none;">
+      <!-- Era Selection (US-1.3) -->
+      <section id="era-selection" class="era-selection">
         <h2>Select Web Era</h2>
-        <div id="era-options" class="era-grid">
-          <!-- Era options will be populated here -->
+        <div id="era-options" class="era-grid" role="radiogroup" aria-label="Era selection">
+          <button class="era-card" role="radio" data-era="90s" aria-checked="false" tabindex="0">
+            <div class="era-preview era-90s"></div>
+            <div class="era-label">90s</div>
+          </button>
+
+          <button class="era-card" role="radio" data-era="win95" aria-checked="false" tabindex="-1">
+            <div class="era-preview era-win95"></div>
+            <div class="era-label">Windows 95</div>
+          </button>
+
+          <button class="era-card" role="radio" data-era="win98" aria-checked="false" tabindex="-1">
+            <div class="era-preview era-win98"></div>
+            <div class="era-label">Windows 98</div>
+          </button>
+
+          <button class="era-card" role="radio" data-era="winxp" aria-checked="false" tabindex="-1">
+            <div class="era-preview era-winxp"></div>
+            <div class="era-label">Windows XP</div>
+          </button>
+        </div>
+
+        <div class="era-actions" style="margin-top:12px; display:flex; gap:8px;">
+          <button id="set-default-era" class="btn btn-primary">Set as Default</button>
+          <div style="flex:1"></div>
         </div>
       </section>
     </main>

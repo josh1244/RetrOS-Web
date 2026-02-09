@@ -69,11 +69,11 @@
 **Type:** Technical Setup  
 **Story Points:** 5  
 **Acceptance Criteria:**
-- [ ] Firefox WebExtension boilerplate created
-- [ ] Manifest.json configured with required permissions (proxy, storage, tabs, scripting)
-- [ ] Development environment setup (webpack/esbuild for bundling)
+- [X] Firefox WebExtension boilerplate created
+- [X] Manifest.json configured with required permissions (proxy, storage, tabs, scripting)
+- [X] Development environment setup (webpack/esbuild for bundling)
 - [ ] Hot-reload working during development
-- [ ] Extension loads in Firefox Developer Edition without errors
+- [X] Extension loads in Firefox Developer Edition without errors
 
 **Tasks:**
 - Initialize WebExtension project structure
@@ -87,13 +87,13 @@
 **Type:** Feature  
 **Story Points:** 8  
 **Acceptance Criteria:**
-- [ ] Popup opens on extension icon click
-- [ ] Popup shows current site domain
-- [ ] Era name displays in header
-- [ ] Status indicator shows (e.g., "pending approval")
-- [ ] Responsive to 300px-500px width
-- [ ] Keyboard navigation works (Tab, Enter, Escape)
-- [ ] No console errors
+- [X] Popup opens on extension icon click
+- [X] Popup shows current site domain
+- [X] Era name displays in header
+- [X] Status indicator shows (e.g., "pending approval")
+- [X] Responsive to 300px-500px width
+- [X] Keyboard navigation works (Tab, Enter, Escape)
+- [X] No console errors
 
 **Tasks:**
 - Create popup HTML structure
@@ -104,17 +104,17 @@
 
 ---
 
-#### US-1.3: Era Selection UI Component
+#### US-1.3: Era Selection UI Component ([completion](US-1.3-COMPLETION.md))
 **Type:** Feature  
 **Story Points:** 8  
 **Acceptance Criteria:**
-- [ ] 4 era options displayed initially (90s, Win95, Win98, WinXP)
-- [ ] Each option shows era name + visual preview
-- [ ] Radio button selection style era-appropriate
-- [ ] Selected era highlighted clearly
-- [ ] "Set as Default" CTA available
-- [ ] Keyboard navigation through options (arrow keys)
-- [ ] Selection persisted to localStorage
+- [X] 4 era options displayed initially (90s, Win95, Win98, WinXP)
+- [X] Each option shows era name + visual preview
+- [X] Radio button selection style era-appropriate
+- [X] Selected era highlighted clearly
+- [X] "Set as Default" CTA available
+- [X] Keyboard navigation through options (arrow keys)
+- [X] Selection persisted to localStorage
 
 **Tasks:**
 - Design era preview cards
