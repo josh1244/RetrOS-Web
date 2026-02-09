@@ -38,6 +38,26 @@ async function initializePopup() {
       currentDomain = domain;
       document.getElementById('current-domain').textContent = domain;
       console.log(`Current domain: ${domain}`);
+      // Query site status (cache + approval)
+      try {
+        const siteStatus = await sendMessage({ type: 'GET_SITE_STATUS', payload: { domain } });
+        if (siteStatus && siteStatus.success) {
+          const data = siteStatus.data || {};
+          if (data.approvalStatus === 'approved') {
+            document.getElementById('status-indicator').textContent = 'Approved ✓';
+            document.getElementById('status-indicator').className = 'info-value status approved';
+          } else if (data.cacheStatus === 'cached') {
+            document.getElementById('status-indicator').textContent = 'Cached';
+          } else if (data.cacheStatus === 'regenerating') {
+            document.getElementById('status-indicator').textContent = 'Regenerating...';
+          } else {
+            document.getElementById('status-indicator').textContent = 'Ready';
+          }
+          console.log('Site status:', data);
+        }
+      } catch (err) {
+        console.warn('Failed to get site status', err);
+      }
     } else {
       document.getElementById('current-domain').textContent = 'Unknown';
     }
@@ -110,17 +130,12 @@ function setupEventListeners() {
 }
 
 /* ---------------------- Era selection (US-1.3) ---------------------- */
-const ERA_KEY = 'selectedEra';
 
 function initEraSelection() {
   const eraOptions = Array.from(document.querySelectorAll('.era-card'));
 
-  // Initialize selection from localStorage (persisted) or settings
-  const stored = localStorage.getItem(ERA_KEY);
-  let initial = stored || currentEra || '90s';
-
-  // Normalize values (match data-era attributes)
-  initial = initial.toLowerCase();
+  // Initialize selection from settings (provided during popup init) or default
+  let initial = (currentEra && currentEra.toLowerCase()) || '90s';
 
   eraOptions.forEach((btn) => {
     const era = btn.getAttribute('data-era').toLowerCase();
@@ -152,9 +167,10 @@ function initEraSelection() {
       const selected = document.querySelector('.era-card[aria-checked="true"]');
       if (selected) {
         const era = selected.getAttribute('data-era');
-        localStorage.setItem(ERA_KEY, era);
-        // notify background of settings change if desired
-        sendMessage({ type: 'SET_SETTINGS', payload: { selectedEra: era } }).catch(() => {});
+        // Persist via background storage helper
+        sendMessage({ type: 'SET_SETTING', key: 'selectedEra', value: era }).then(() => {
+          console.log('Popup: persisted selectedEra ->', era);
+        }).catch((err) => console.warn('Popup: failed to persist era', err));
         document.getElementById('status-indicator').textContent = 'Default set ✓';
         setTimeout(() => { document.getElementById('status-indicator').textContent = 'Ready'; }, 1200);
       }

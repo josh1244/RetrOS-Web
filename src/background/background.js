@@ -37,6 +37,43 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background received message:', message.type, message);
 
+  // Storage helper functions
+  const getSettings = (cb) => {
+    chrome.storage.local.get('settings', (result) => {
+      console.log('Background: read settings', result.settings);
+      cb(result.settings || {});
+    });
+  };
+
+  const setSetting = (key, value, cb) => {
+    chrome.storage.local.get('settings', (result) => {
+      const settings = result.settings || {};
+      settings[key] = value;
+      chrome.storage.local.set({ settings }, () => {
+        console.log(`Background: set settings.${key} =`, value);
+        if (cb) cb(settings);
+      });
+    });
+  };
+
+  const getSite = (domain, cb) => {
+    chrome.storage.local.get('sites', (result) => {
+      const sites = result.sites || {};
+      cb(sites[domain] || {});
+    });
+  };
+
+  const setSite = (domain, data, cb) => {
+    chrome.storage.local.get('sites', (result) => {
+      const sites = result.sites || {};
+      sites[domain] = Object.assign({}, sites[domain] || {}, data);
+      chrome.storage.local.set({ sites }, () => {
+        console.log(`Background: set site ${domain}`, data);
+        if (cb) cb(sites[domain]);
+      });
+    });
+  };
+
   if (message.type === 'GET_CURRENT_TAB') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length > 0) {
@@ -61,25 +98,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'GET_SETTINGS') {
-    chrome.storage.local.get('settings', (result) => {
-      sendResponse({
-        success: true,
-        data: result.settings || {}
-      });
+    getSettings((settings) => {
+      sendResponse({ success: true, data: settings });
     });
     return true;
   }
 
   if (message.type === 'SET_SETTING') {
-    chrome.storage.local.get('settings', (result) => {
-      const settings = result.settings || {};
-      settings[message.key] = message.value;
-      chrome.storage.local.set({ settings }, () => {
-        sendResponse({
-          success: true,
-          data: settings
-        });
-      });
+    setSetting(message.key, message.value, (settings) => {
+      sendResponse({ success: true, data: settings });
     });
     return true;
   }
@@ -87,20 +114,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'APPROVE_STYLE') {
     console.log('Background: Approving style for', message.payload.domain);
     // Store approval in settings
-    chrome.storage.local.get('sites', (result) => {
-      const sites = result.sites || {};
-      if (!sites[message.payload.domain]) {
-        sites[message.payload.domain] = {};
-      }
-      sites[message.payload.domain].approvalStatus = 'approved';
-      sites[message.payload.domain].approvedAt = new Date().toISOString();
-      
-      chrome.storage.local.set({ sites }, () => {
-        sendResponse({
-          success: true,
-          message: 'Style approved'
-        });
-      });
+    setSite(message.payload.domain, {
+      approvalStatus: 'approved',
+      approvedAt: new Date().toISOString()
+    }, (site) => {
+      sendResponse({ success: true, message: 'Style approved', data: site });
     });
     return true;
   }
@@ -108,20 +126,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'REJECT_STYLE') {
     console.log('Background: Rejecting style for', message.payload.domain);
     // Mark for regeneration
-    chrome.storage.local.get('sites', (result) => {
-      const sites = result.sites || {};
-      if (!sites[message.payload.domain]) {
-        sites[message.payload.domain] = {};
-      }
-      sites[message.payload.domain].approvalStatus = 'rejected';
-      sites[message.payload.domain].rejectedAt = new Date().toISOString();
-      
-      chrome.storage.local.set({ sites }, () => {
-        sendResponse({
-          success: true,
-          message: 'Style rejected'
-        });
-      });
+    setSite(message.payload.domain, {
+      approvalStatus: 'rejected',
+      rejectedAt: new Date().toISOString()
+    }, (site) => {
+      sendResponse({ success: true, message: 'Style rejected', data: site });
     });
     return true;
   }
@@ -132,12 +141,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     // TODO: Send to proxy for regeneration
     // For now, just log the feedback
-    sendResponse({
-      success: true,
-      message: 'Regeneration requested',
-      data: {
-        feedback: message.payload.feedback
-      }
+    // mark site as regenerating
+    setSite(message.payload.domain, { cacheStatus: 'regenerating' }, (site) => {
+      sendResponse({ success: true, message: 'Regeneration requested', data: { feedback: message.payload.feedback, site } });
+    });
+    return true;
+  }
+
+  // Provide current site status (cache/approval)
+  if (message.type === 'GET_SITE_STATUS') {
+    const domain = message.payload && message.payload.domain;
+    if (!domain) {
+      sendResponse({ success: false, error: 'Missing domain' });
+      return true;
+    }
+
+    getSite(domain, (site) => {
+      // Provide defaults
+      const status = Object.assign({ cacheStatus: 'unknown', approvalStatus: 'unknown' }, site);
+      sendResponse({ success: true, data: status });
     });
     return true;
   }
