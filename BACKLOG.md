@@ -226,18 +226,14 @@
 **Type:** Feature  
 **Story Points:** 13  
 **Acceptance Criteria:**
-- [ ] Proxy can fetch pages via HTTP/HTTPS
-- [ ] User-Agent set to Firefox to avoid bot detection
-- [ ] DOM parsed and structure extracted
-- [ ] JavaScript execution skipped (static DOM only)
-- [ ] Large pages (>5MB) handled gracefully
-- [ ] Timeout after 10s fetch attempt
-- [ ] Redirect chains followed (max 5 redirects)
-- [ ] Error responses logged and reported
-
-**Tasks:**
-- Implement HTTP fetcher with requests library
-- Add DOM parser (BeautifulSoup or similar)
+ - [X] Proxy can fetch pages via HTTP/HTTPS
+ - [X] User-Agent set to Firefox to avoid bot detection
+ - [X] DOM parsed and structure extracted
+ - [X] JavaScript execution skipped (static DOM only)
+ - [X] Large pages (>5MB) handled gracefully
+ - [X] Timeout after 10s fetch attempt
+ - [X] Redirect chains followed (max 5 redirects)
+ - [X] Error responses logged and reported
 - Create digest/fingerprint of page structure
 - Add timeout and error handling
 - Test on 20+ diverse websites
