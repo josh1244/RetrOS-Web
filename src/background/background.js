@@ -13,6 +13,13 @@ console.log('RetrOS-Web background service worker loaded');
 // Track current active tab
 let currentTabId = null;
 
+// Lightweight logger helper
+const log = (level, ...args) => {
+  if (level === 'error') console.error('[BG]', ...args);
+  else if (level === 'warn') console.warn('[BG]', ...args);
+  else console.log('[BG]', ...args);
+};
+
 /**
  * Handle tab activation
  */
@@ -28,8 +35,33 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   if (currentTabId === tabId) {
     currentTabId = null;
   }
-  console.log(`Tab removed: ${tabId}`);
+  log('info', `Tab removed: ${tabId}`);
 });
+
+/**
+ * Send a message to a specific tab's content script, resolving the response.
+ * Falls back to querying the active tab if tabId is not provided.
+ */
+function sendMessageToTab(tabId, message) {
+  return new Promise((resolve, reject) => {
+    const doSend = (id) => {
+      chrome.tabs.sendMessage(id, message, (response) => {
+        if (chrome.runtime.lastError) {
+          log('warn', 'sendMessageToTab lastError', chrome.runtime.lastError.message);
+          return reject(chrome.runtime.lastError);
+        }
+        resolve(response || {});
+      });
+    };
+
+    if (tabId) return doSend(tabId);
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs.length) return doSend(tabs[0].id);
+      reject(new Error('No active tab to send message to'));
+    });
+  });
+}
 
 /**
  * Handle messages from popup and content scripts
@@ -145,6 +177,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     setSite(message.payload.domain, { cacheStatus: 'regenerating' }, (site) => {
       sendResponse({ success: true, message: 'Regeneration requested', data: { feedback: message.payload.feedback, site } });
     });
+    return true;
+  }
+
+  // Apply CSS to page via content script
+  if (message.type === 'APPLY_STYLE') {
+    const domain = message.payload && message.payload.domain;
+    const css = message.payload && message.payload.css;
+    if (!css) {
+      sendResponse({ success: false, error: 'Missing css in payload' });
+      return true;
+    }
+
+    // Send to tab (use provided tabId or active tab)
+    const tabId = (message.payload && message.payload.tabId) || currentTabId;
+    sendMessageToTab(tabId, { type: 'APPLY_STYLE', payload: { css } })
+      .then((resp) => {
+        log('info', 'APPLY_STYLE delivered', resp);
+        // mark site cache as applied
+        if (domain) setSite(domain, { cacheStatus: 'applied' }, () => {});
+        sendResponse({ success: true, message: 'Style applied', data: resp });
+      })
+      .catch((err) => {
+        log('warn', 'Failed to apply style to tab', err);
+        sendResponse({ success: false, error: err.message || String(err) });
+      });
+
     return true;
   }
 
