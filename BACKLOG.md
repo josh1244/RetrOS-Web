@@ -206,12 +206,12 @@
 **Type:** Technical Setup  
 **Story Points:** 5  
 **Acceptance Criteria:**
-- [ ] Python 3.9+ project initialized
-- [ ] Dependencies defined (Flask, requests, transformers, etc.)
-- [ ] Virtual environment setup documented
-- [ ] Proxy runs on localhost:9999 by default
-- [ ] Health check endpoint (/health) responds with 200 OK
-- [ ] CORS headers allow requests from extension
+- [X] Python 3.9+ project initialized
+- [X] Dependencies defined (Flask, requests, transformers, etc.)
+- [X] Virtual environment setup documented
+- [X] Proxy runs on localhost:9999 by default
+- [X] Health check endpoint (/health) responds with 200 OK
+- [X] CORS headers allow requests from extension
 
 **Tasks:**
 - Create requirements.txt with all dependencies
