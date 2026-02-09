@@ -8,6 +8,10 @@
  * - Manages communication with local proxy
  */
 
+// Import proxy communication module
+// Note: In Firefox extension context, this loads via script tags in manifest
+// We access it as a global after the background script loads
+
 console.log('RetrOS-Web background service worker loaded');
 
 // Track current active tab
@@ -171,13 +175,90 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Background: Regenerating style for', message.payload.domain);
     console.log('Feedback:', message.payload.feedback);
     
-    // TODO: Send to proxy for regeneration
-    // For now, just log the feedback
-    // mark site as regenerating
+    // Mark site as regenerating and send to proxy if available
     setSite(message.payload.domain, { cacheStatus: 'regenerating' }, (site) => {
+      // Attempt to send to proxy asynchronously
+      if (typeof generateStyle !== 'undefined') {
+        const request = {
+          domain: message.payload.domain,
+          era: message.payload.era || 'Windows 95',
+          domDigest: message.payload.domDigest || 'unknown',
+          feedback: message.payload.feedback
+        };
+        
+        generateStyle(request)
+          .then((response) => {
+            if (response.success) {
+              console.log('[BG] Style generated successfully from proxy');
+              // Apply the generated CSS
+              sendMessageToTab(currentTabId, { 
+                type: 'APPLY_STYLE', 
+                payload: { css: response.css } 
+              }).catch(err => console.error('[BG] Failed to apply proxy-generated CSS:', err));
+            } else {
+              console.error('[BG] Proxy generation failed:', response.error);
+            }
+          })
+          .catch(err => console.error('[BG] Error calling generateStyle:', err));
+      }
+      
       sendResponse({ success: true, message: 'Regeneration requested', data: { feedback: message.payload.feedback, site } });
     });
     return true;
+  }
+
+  // Generate style via proxy (new message type for explicit generation requests)
+  if (message.type === 'GENERATE_STYLE') {
+    const domain = message.payload && message.payload.domain;
+    const era = message.payload && message.payload.era;
+    const domDigest = message.payload && message.payload.domDigest;
+
+    if (!domain || !era || !domDigest) {
+      sendResponse({ 
+        success: false, 
+        error: 'Missing required fields: domain, era, domDigest' 
+      });
+      return true;
+    }
+
+    if (typeof generateStyle === 'undefined') {
+      sendResponse({
+        success: false,
+        error: 'Proxy client module not loaded'
+      });
+      return true;
+    }
+
+    // Mark as processing
+    setSite(domain, { cacheStatus: 'processing' }, () => {
+      const request = {
+        domain,
+        era,
+        domDigest,
+        feedback: message.payload.feedback
+      };
+
+      generateStyle(request)
+        .then((response) => {
+          if (response.success) {
+            log('info', `Generated CSS for ${domain} (${response.css.length} bytes)`);
+            sendResponse(response);
+          } else {
+            log('warn', `Proxy generation failed for ${domain}:`, response.error);
+            sendResponse(response);
+          }
+        })
+        .catch((error) => {
+          log('error', 'Unexpected error during generation:', error);
+          sendResponse({
+            success: false,
+            error: error.message || 'Unknown error during generation',
+            errorCode: 'GENERATION_ERROR'
+          });
+        });
+    });
+
+    return true; // Keep channel open for async response
   }
 
   // Apply CSS to page via content script

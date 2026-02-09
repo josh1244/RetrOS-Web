@@ -12,7 +12,11 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["background/background.js"]
+    "scripts": [
+      "lib/config.js",
+      "lib/proxy-client.js",
+      "background/background.js"
+    ]
   },
   "action": {
     "default_popup": "popup/popup.html",
