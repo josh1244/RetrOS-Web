@@ -84,11 +84,63 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // Fallback response
-  sendResponse({
-    success: false,
-    error: `Unknown message type: ${message.type}`
-  });
+  if (message.type === 'APPROVE_STYLE') {
+    console.log('Background: Approving style for', message.payload.domain);
+    // Store approval in settings
+    chrome.storage.local.get('sites', (result) => {
+      const sites = result.sites || {};
+      if (!sites[message.payload.domain]) {
+        sites[message.payload.domain] = {};
+      }
+      sites[message.payload.domain].approvalStatus = 'approved';
+      sites[message.payload.domain].approvedAt = new Date().toISOString();
+      
+      chrome.storage.local.set({ sites }, () => {
+        sendResponse({
+          success: true,
+          message: 'Style approved'
+        });
+      });
+    });
+    return true;
+  }
+
+  if (message.type === 'REJECT_STYLE') {
+    console.log('Background: Rejecting style for', message.payload.domain);
+    // Mark for regeneration
+    chrome.storage.local.get('sites', (result) => {
+      const sites = result.sites || {};
+      if (!sites[message.payload.domain]) {
+        sites[message.payload.domain] = {};
+      }
+      sites[message.payload.domain].approvalStatus = 'rejected';
+      sites[message.payload.domain].rejectedAt = new Date().toISOString();
+      
+      chrome.storage.local.set({ sites }, () => {
+        sendResponse({
+          success: true,
+          message: 'Style rejected'
+        });
+      });
+    });
+    return true;
+  }
+
+  if (message.type === 'REGENERATE_STYLE') {
+    console.log('Background: Regenerating style for', message.payload.domain);
+    console.log('Feedback:', message.payload.feedback);
+    
+    // TODO: Send to proxy for regeneration
+    // For now, just log the feedback
+    sendResponse({
+      success: true,
+      message: 'Regeneration requested',
+      data: {
+        feedback: message.payload.feedback
+      }
+    });
+    return true;
+  }
 });
 
 console.log('RetrOS-Web background service worker ready');

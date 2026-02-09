@@ -5,10 +5,17 @@
  * - Display current site and era
  * - Show status information
  * - Route to settings
- * - Manage approval workflow (US-1.2+)
+ * - Manage approval workflow
+ * - Handle feedback submission
  */
 
 console.log('RetrOS-Web popup script loaded');
+
+// Track state
+let currentDomain = '';
+let currentEra = '';
+let feedbackOpen = false;
+let selectedFeedback = null;
 
 /**
  * Initialize popup on load
@@ -28,6 +35,7 @@ async function initializePopup() {
     
     if (currentTab.success) {
       const domain = currentTab.data.domain;
+      currentDomain = domain;
       document.getElementById('current-domain').textContent = domain;
       console.log(`Current domain: ${domain}`);
     } else {
@@ -38,7 +46,9 @@ async function initializePopup() {
     const settings = await sendMessage({ type: 'GET_SETTINGS' });
     if (settings.success) {
       const era = settings.data.selectedEra || 'Not selected';
+      currentEra = era;
       document.getElementById('current-era').textContent = era;
+      document.getElementById('approval-era').textContent = era;
       console.log(`Current era: ${era}`);
     } else {
       document.getElementById('current-era').textContent = 'Error loading';
@@ -58,6 +68,23 @@ async function initializePopup() {
  * Setup event listeners for popup UI
  */
 function setupEventListeners() {
+  // Approval buttons
+  document.getElementById('approve-btn').addEventListener('click', approveStyle);
+  document.getElementById('reject-btn').addEventListener('click', rejectStyle);
+  document.getElementById('feedback-btn').addEventListener('click', toggleFeedback);
+  document.getElementById('close-approval-btn').addEventListener('click', closeApproval);
+
+  // Feedback preset buttons
+  document.querySelectorAll('.feedback-preset').forEach(btn => {
+    btn.addEventListener('click', (e) => handleFeedbackPreset(e.target));
+  });
+
+  // Feedback textarea
+  document.getElementById('feedback-text').addEventListener('input', updateCharCounter);
+
+  // Regenerate button
+  document.getElementById('regenerate-btn').addEventListener('click', regenerateStyle);
+
   // Settings button
   const settingsBtn = document.getElementById('settings-btn');
   if (settingsBtn) {
@@ -70,10 +97,219 @@ function setupEventListeners() {
   // Keyboard accessibility
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      // Close popup
-      window.close();
+      if (feedbackOpen) {
+        closeFeedback();
+      } else {
+        // Optionally close popup
+        // window.close();
+      }
     }
   });
+
+  console.log('Event listeners setup complete');
+}
+
+/**
+ * Approve the current style
+ */
+async function approveStyle() {
+  console.log('Approving style for:', currentDomain);
+  
+  try {
+    const response = await sendMessage({
+      type: 'APPROVE_STYLE',
+      payload: {
+        domain: currentDomain,
+        era: currentEra
+      }
+    });
+
+    if (response.success) {
+      console.log('Style approved');
+      document.getElementById('status-indicator').textContent = 'Approved ✓';
+      document.getElementById('status-indicator').className = 'info-value status approved';
+      
+      // Hide approval section after short delay
+      setTimeout(() => {
+        document.getElementById('approval-section').style.display = 'none';
+      }, 500);
+    } else {
+      console.error('Approval failed:', response.error);
+      alert('Failed to approve style: ' + response.error);
+    }
+  } catch (error) {
+    console.error('Error approving style:', error);
+    alert('Error approving style');
+  }
+}
+
+/**
+ * Reject the current style and show feedback form
+ */
+function rejectStyle() {
+  console.log('Rejecting style for:', currentDomain);
+  openFeedback();
+}
+
+/**
+ * Toggle feedback form visibility
+ */
+function toggleFeedback() {
+  if (feedbackOpen) {
+    closeFeedback();
+  } else {
+    openFeedback();
+  }
+}
+
+/**
+ * Open feedback form
+ */
+function openFeedback() {
+  feedbackOpen = true;
+  document.getElementById('feedback-section').hidden = false;
+  document.getElementById('feedback-btn').classList.add('active');
+  document.getElementById('feedback-text').focus();
+  console.log('Feedback form opened');
+}
+
+/**
+ * Close feedback form
+ */
+function closeFeedback() {
+  feedbackOpen = false;
+  document.getElementById('feedback-section').hidden = true;
+  document.getElementById('feedback-btn').classList.remove('active');
+  
+  // Clear form
+  document.querySelectorAll('.feedback-preset').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  document.getElementById('feedback-text').value = '';
+  updateCharCounter();
+  selectedFeedback = null;
+  
+  console.log('Feedback form closed');
+}
+
+/**
+ * Close approval section
+ */
+function closeApproval() {
+  console.log('Closing approval section');
+  document.getElementById('approval-section').style.display = 'none';
+}
+
+/**
+ * Handle feedback preset button click
+ */
+function handleFeedbackPreset(button) {
+  const feedbackType = button.getAttribute('data-feedback');
+  
+  // Toggle selection
+  if (button.classList.contains('selected')) {
+    button.classList.remove('selected');
+    selectedFeedback = null;
+  } else {
+    // Remove selection from other buttons (single select)
+    document.querySelectorAll('.feedback-preset').forEach(btn => {
+      btn.classList.remove('selected');
+    });
+    
+    // Select this button
+    button.classList.add('selected');
+    selectedFeedback = feedbackType;
+  }
+  
+  console.log('Feedback selected:', selectedFeedback);
+}
+
+/**
+ * Update character counter for feedback textarea
+ */
+function updateCharCounter() {
+  const textarea = document.getElementById('feedback-text');
+  const counter = document.getElementById('char-count');
+  const counterEl = document.querySelector('.char-counter');
+  
+  const remaining = textarea.value.length;
+  counter.textContent = remaining;
+  
+  // Update class based on remaining characters
+  if (remaining > 180) {
+    counterEl.classList.add('warning');
+    counterEl.classList.remove('error');
+  } else if (remaining === 200) {
+    counterEl.classList.add('error');
+    counterEl.classList.remove('warning');
+  } else {
+    counterEl.classList.remove('warning', 'error');
+  }
+}
+
+/**
+ * Regenerate style with feedback
+ */
+async function regenerateStyle() {
+  const feedbackText = document.getElementById('feedback-text').value.trim();
+  
+  // Validation
+  if (!selectedFeedback && !feedbackText) {
+    alert('Please select a feedback option or provide additional feedback');
+    return;
+  }
+
+  console.log('Regenerating style with feedback:', {
+    preset: selectedFeedback,
+    text: feedbackText
+  });
+
+  try {
+    // Show loading state
+    const btn = document.getElementById('regenerate-btn');
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ Regenerating...';
+    btn.disabled = true;
+
+    const response = await sendMessage({
+      type: 'REGENERATE_STYLE',
+      payload: {
+        domain: currentDomain,
+        feedback: {
+          preset: selectedFeedback,
+          text: feedbackText
+        }
+      }
+    });
+
+    // Restore button
+    btn.textContent = originalText;
+    btn.disabled = false;
+
+    if (response.success) {
+      console.log('Style regenerated');
+      document.getElementById('status-indicator').textContent = 'Generating...';
+      
+      // Close feedback form
+      closeFeedback();
+      
+      // Show success message
+      setTimeout(() => {
+        document.getElementById('status-indicator').textContent = 'Regenerated ✓';
+      }, 1000);
+    } else {
+      console.error('Regeneration failed:', response.error);
+      alert('Failed to regenerate style: ' + response.error);
+    }
+  } catch (error) {
+    console.error('Error regenerating style:', error);
+    alert('Error regenerating style');
+    
+    // Restore button
+    const btn = document.getElementById('regenerate-btn');
+    btn.textContent = '🔄 Regenerate & Apply';
+    btn.disabled = false;
+  }
 }
 
 /**
@@ -95,3 +331,4 @@ function sendMessage(message) {
 }
 
 console.log('RetrOS-Web popup script ready');
+

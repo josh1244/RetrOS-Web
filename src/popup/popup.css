@@ -146,11 +146,210 @@ body {
   border-radius: 4px;
 }
 
-.era-grid {
+/* Approval Section */
+.approval-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.approval-title {
+  margin: 0;
+  font-size: var(--font-size-header);
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background-color: var(--bg-primary);
+}
+
+.close-btn:active {
+  background-color: var(--border-color);
+}
+
+.close-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.approval-message {
+  margin: 0 0 var(--spacing-md) 0;
+  padding: var(--spacing-sm);
+  background-color: var(--bg-primary);
+  border-left: 4px solid var(--accent-color);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+}
+
+.approval-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+/* Button Styles */
+.btn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  min-height: 32px;
+}
+
+.btn:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--accent-color);
+}
+
+.btn:active {
+  transform: scale(0.98);
+  background-color: var(--border-color);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--accent-color);
+  color: #ffffff;
+  border-color: var(--accent-color);
+}
+
+.btn-primary:hover {
+  background-color: #0052a3;
+  border-color: #0052a3;
+}
+
+.btn-secondary {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-secondary);
+}
+
+/* Feedback Section */
+.feedback-title {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-header);
+  font-weight: 600;
+}
+
+.feedback-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
 }
+
+.feedback-preset {
+  padding: var(--spacing-sm);
+  border: 2px solid var(--border-color);
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: var(--font-size-small);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.feedback-preset:hover {
+  border-color: var(--accent-color);
+  background-color: var(--bg-secondary);
+}
+
+.feedback-preset:active {
+  transform: scale(0.98);
+  border-color: var(--accent-color);
+  background-color: var(--accent-color);
+  color: #ffffff;
+}
+
+.feedback-preset:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.feedback-preset.selected {
+  border-color: var(--accent-color);
+  background-color: var(--accent-color);
+  color: #ffffff;
+}
+
+/* Feedback Input Group */
+.feedback-input-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.feedback-textarea {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  resize: vertical;
+  min-height: 60px;
+  max-height: 120px;
+  margin-bottom: var(--spacing-xs);
+}
+
+.feedback-textarea:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+  border-color: var(--accent-color);
+}
+
+.char-counter {
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  text-align: right;
+  margin-bottom: var(--spacing-sm);
+}
+
+.char-counter.warning {
+  color: #ff6600;
+  font-weight: 500;
+}
+
+.char-counter.error {
+  color: #cc0000;
+  font-weight: 600;
+}
+
+/* Era Grid */
 
 /* Footer */
 .popup-footer {

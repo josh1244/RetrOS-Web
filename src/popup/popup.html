@@ -32,14 +32,36 @@
         </div>
       </section>
 
-      <!-- Placeholder for Approval UI (US-1.2) -->
-      <section id="approval-section" class="approval-section" style="display: none;">
-        <p>Approval UI will appear here</p>
+      <!-- Approval Section -->
+      <section id="approval-section" class="approval-section">
+        <div class="approval-header">
+          <h3 class="approval-title">Style Applied</h3>
+          <button id="close-approval-btn" class="close-btn" title="Close approval" aria-label="Close approval notification">×</button>
+        </div>
+        <p class="approval-message">Styling applied for <strong id="approval-era">your era</strong></p>
+        <div class="approval-actions">
+          <button id="approve-btn" class="btn btn-primary" title="Approve this style">✓ Approve</button>
+          <button id="reject-btn" class="btn btn-secondary" title="Reject and regenerate">✕ Reject</button>
+          <button id="feedback-btn" class="btn btn-secondary" title="Provide feedback">💬 Feedback</button>
+        </div>
       </section>
 
-      <!-- Placeholder for Feedback UI (US-1.3) -->
-      <section id="feedback-section" class="feedback-section" style="display: none;">
-        <p>Feedback UI will appear here</p>
+      <!-- Feedback Section -->
+      <section id="feedback-section" class="feedback-section" hidden>
+        <h3 class="feedback-title">Style Feedback</h3>
+        <div class="feedback-options">
+          <button class="feedback-preset" data-feedback="too-modern" title="Style is too modern">Too Modern</button>
+          <button class="feedback-preset" data-feedback="too-simple" title="Style is too simple">Too Simple</button>
+          <button class="feedback-preset" data-feedback="simplify-layout" title="Simplify the layout">Simplify Layout</button>
+          <button class="feedback-preset" data-feedback="more-usable" title="Make it more usable">More Usable</button>
+        </div>
+        <div class="feedback-input-group">
+          <textarea id="feedback-text" class="feedback-textarea" placeholder="Additional feedback (optional)" maxlength="200" aria-label="Additional feedback"></textarea>
+          <div class="char-counter">
+            <span id="char-count">0</span><span>/200</span>
+          </div>
+        </div>
+        <button id="regenerate-btn" class="btn btn-primary" title="Regenerate style with feedback">🔄 Regenerate & Apply</button>
       </section>
 
       <!-- Placeholder for Era Selection (US-1.3) -->
