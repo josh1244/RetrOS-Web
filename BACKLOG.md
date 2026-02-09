@@ -125,15 +125,15 @@
 
 ---
 
-#### US-1.4: Extension Storage & State Management
+#### US-1.4: Extension Storage & State Management ([completion](US-1.4-COMPLETION.md))
 **Type:** Technical  
 **Story Points:** 5  
 **Acceptance Criteria:**
-- [ ] User's selected era stored in browser.storage.local
-- [ ] Current site cache status tracked
-- [ ] Approval status persisted
-- [ ] Settings object structure defined
-- [ ] Storage read/write verified with console logs
+- [X] User's selected era stored in browser.storage.local
+- [X] Current site cache status tracked
+- [X] Approval status persisted
+- [X] Settings object structure defined
+- [X] Storage read/write verified with console logs
 
 **Tasks:**
 - Define storage schema
@@ -143,16 +143,16 @@
 
 ---
 
-#### US-1.5: Background Script Architecture
+#### US-1.5: Background Script Architecture ([completion](US-1.5-COMPLETION.md))
 **Type:** Technical  
 **Story Points:** 8  
 **Acceptance Criteria:**
-- [ ] Background script listens for tab changes
-- [ ] Current active tab tracked
-- [ ] Messages from popup handled properly
-- [ ] Communication with content script functional
-- [ ] Logging system implemented for debugging
-- [ ] No memory leaks on tab close
+- [X] Background script listens for tab changes
+- [X] Current active tab tracked
+- [X] Messages from popup handled properly
+- [X] Communication with content script functional
+- [X] Logging system implemented for debugging
+- [X] No memory leaks on tab close
 
 **Tasks:**
 - Create background.js with event listeners
@@ -162,16 +162,16 @@
 
 ---
 
-#### US-1.6: Content Script Injection System
+#### US-1.6: Content Script Injection System ([completion](US-1.6-COMPLETION.md))
 **Type:** Technical  
 **Story Points:** 8  
 **Acceptance Criteria:**
-- [ ] Content script injects on page load
-- [ ] CSS can be injected dynamically
-- [ ] Script isolation from page JavaScript verified
-- [ ] Handles frames and iframes gracefully
-- [ ] Can safely remove styles on demand
-- [ ] No console errors from injection
+- [X] Content script injects on page load
+- [X] CSS can be injected dynamically
+- [X] Script isolation from page JavaScript verified
+- [X] Handles frames and iframes gracefully
+- [X] Can safely remove styles on demand
+- [X] No console errors from injection
 
 **Tasks:**
 - Create content.js entry point
@@ -181,16 +181,16 @@
 
 ---
 
-#### US-1.7: Communication Protocol Between Extension & Proxy
+#### US-1.7: Communication Protocol Between Extension & Proxy ([completion](US-1.7-COMPLETION.md))
 **Type:** Technical  
 **Story Points:** 8  
 **Acceptance Criteria:**
-- [ ] Extension can send HTTP requests to localhost:9999 (configurable)
-- [ ] Request includes: domain, current DOM digest, era name
-- [ ] Response parsing functional (expects CSS + metadata)
-- [ ] Timeout handling (5s default)
-- [ ] Error handling with fallback behavior
-- [ ] Message format documented
+- [X] Extension can send HTTP requests to localhost:9999 (configurable)
+- [X] Request includes: domain, current DOM digest, era name
+- [X] Response parsing functional (expects CSS + metadata)
+- [X] Timeout handling (5s default)
+- [X] Error handling with fallback behavior
+- [X] Message format documented
 
 **Tasks:**
 - Define request/response schema
