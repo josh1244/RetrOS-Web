@@ -1,0 +1,212 @@
+/**
+ * Popup Styles
+ * 
+ * Base styling for extension popup
+ * Era-specific styling will be added in US-5.4
+ */
+
+:root {
+  /* Base Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --text-primary: #000000;
+  --text-secondary: #666666;
+  --border-color: #cccccc;
+  --accent-color: #0066cc;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-size-body: 14px;
+  --font-size-small: 12px;
+  --font-size-header: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 350px;
+  min-height: 400px;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-body);
+}
+
+#popup-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+/* Header */
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.popup-title {
+  margin: 0;
+  font-size: var(--font-size-header);
+  font-weight: 600;
+}
+
+.settings-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  padding: var(--spacing-sm);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  transition: background-color 0.2s;
+}
+
+.settings-btn:hover {
+  background-color: var(--bg-secondary);
+}
+
+.settings-btn:active {
+  background-color: var(--border-color);
+}
+
+.settings-btn:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Main Content */
+.popup-main {
+  flex: 1;
+  padding: var(--spacing-md);
+  overflow-y: auto;
+}
+
+/* Site Info Section */
+.site-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.info-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.info-label {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  padding: var(--spacing-sm);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.info-value.status {
+  font-weight: 500;
+  color: var(--accent-color);
+}
+
+/* Sections (for future use) */
+.approval-section,
+.feedback-section,
+.era-selection {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.era-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+/* Footer */
+.popup-footer {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+}
+
+.footer-info {
+  margin: 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Focus visible for keyboard navigation */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+  body {
+    width: 100%;
+  }
+
+  .popup-header {
+    padding: var(--spacing-sm);
+  }
+
+  .popup-title {
+    font-size: 16px;
+  }
+
+  .popup-main {
+    padding: var(--spacing-sm);
+  }
+}
