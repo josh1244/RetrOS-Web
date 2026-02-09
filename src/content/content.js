@@ -30,11 +30,25 @@ function injectCSS(css, id = 'retros-web-style') {
     style.textContent = css;
     style.type = 'text/css';
 
-    // Inject into head
-    document.head.appendChild(style);
-    injectedStyleElement = style;
+    // Prefer head, but fallback if not available yet (document_start)
+    const container = document.head || document.documentElement || document.body;
+    if (!container) {
+      // As a last resort, queue insertion on DOMContentLoaded
+      document.addEventListener('DOMContentLoaded', () => {
+        try {
+          document.head.appendChild(style);
+          injectedStyleElement = style;
+          console.log('CSS injected after DOMContentLoaded');
+        } catch (err) {
+          console.error('Failed to inject CSS after DOMContentLoaded', err);
+        }
+      }, { once: true });
+    } else {
+      container.appendChild(style);
+      injectedStyleElement = style;
+      console.log('CSS injected successfully');
+    }
 
-    console.log('CSS injected successfully');
     return true;
   } catch (error) {
     console.error('Error injecting CSS:', error);
@@ -77,6 +91,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       success,
       message: success ? 'CSS injected' : 'Failed to inject CSS'
     });
+    return;
+  }
+
+  if (message.type === 'APPLY_STYLE') {
+    // Backwards/alternate channel name used by background
+    const css = message.payload && message.payload.css;
+    const id = (message.payload && message.payload.id) || 'retros-web-style';
+    const success = injectCSS(css, id);
+    sendResponse({ success, message: success ? 'Style applied' : 'Failed to apply style' });
     return;
   }
 
