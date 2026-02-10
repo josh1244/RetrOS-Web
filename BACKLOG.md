@@ -436,17 +436,18 @@ See `US-2.3-COMPLETION.md` for full implementation details.
 
 ---
 
-#### US-3.5: Approval Workflow State Machine
+#### US-3.5: Approval Workflow State Machine ([completion](US-3.5-COMPLETION.md))
 **Type:** Technical  
 **Story Points:** 8  
+**Status:** ✅ **COMPLETED**
 **Acceptance Criteria:**
-- [ ] States defined: "pending", "approved", "rejected", "processing"
-- [ ] State transitions validate correctly
-- [ ] User can't approve twice
-- [ ] Rejection triggers regeneration flow
-- [ ] Metadata persisted after state change
-- [ ] State recovery on extension restart
-- [ ] Logging for all state transitions
+- [x] States defined: "pending", "approved", "rejected", "processing"
+- [x] State transitions validate correctly
+- [x] User can't approve twice
+- [x] Rejection triggers regeneration flow
+- [x] Metadata persisted after state change
+- [x] State recovery on extension restart
+- [x] Logging for all state transitions
 
 **Tasks:**
 - Define state machine

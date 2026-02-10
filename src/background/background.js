@@ -17,6 +17,34 @@ console.log('RetrOS-Web background service worker loaded');
 // Track current active tab
 let currentTabId = null;
 
+const APPROVAL_STATES = Object.freeze({
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  processing: 'processing'
+});
+
+const APPROVAL_TRANSITIONS = Object.freeze({
+  [APPROVAL_STATES.pending]: [APPROVAL_STATES.approved, APPROVAL_STATES.rejected, APPROVAL_STATES.processing],
+  [APPROVAL_STATES.rejected]: [APPROVAL_STATES.processing, APPROVAL_STATES.pending],
+  [APPROVAL_STATES.processing]: [APPROVAL_STATES.pending, APPROVAL_STATES.rejected],
+  [APPROVAL_STATES.approved]: []
+});
+
+const normalizeApprovalState = (state) => {
+  if (!state) return APPROVAL_STATES.pending;
+  if (Object.values(APPROVAL_STATES).includes(state)) return state;
+  if (state === 'unknown') return APPROVAL_STATES.pending;
+  return APPROVAL_STATES.pending;
+};
+
+const canTransitionApproval = (fromState, toState) => {
+  const from = normalizeApprovalState(fromState);
+  if (from === toState) return false;
+  const allowed = APPROVAL_TRANSITIONS[from] || [];
+  return allowed.includes(toState);
+};
+
 // Lightweight logger helper
 const log = (level, ...args) => {
   if (level === 'error') console.error('[BG]', ...args);
@@ -40,6 +68,33 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     currentTabId = null;
   }
   log('info', `Tab removed: ${tabId}`);
+});
+
+const normalizeStoredStates = () => {
+  chrome.storage.local.get('sites', (result) => {
+    const sites = result.sites || {};
+    let mutated = false;
+    Object.keys(sites).forEach((domain) => {
+      const state = normalizeApprovalState(sites[domain].approvalStatus);
+      if (sites[domain].approvalStatus !== state) {
+        sites[domain].approvalStatus = state;
+        mutated = true;
+      }
+    });
+    if (mutated) {
+      chrome.storage.local.set({ sites }, () => {
+        log('info', 'Normalized approval states on startup');
+      });
+    }
+  });
+};
+
+chrome.runtime.onStartup.addListener(() => {
+  normalizeStoredStates();
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  normalizeStoredStates();
 });
 
 /**
@@ -110,6 +165,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   };
 
+  const transitionApprovalState = (domain, nextState, cb) => {
+    getSite(domain, (site) => {
+      const currentState = normalizeApprovalState(site.approvalStatus);
+      if (!canTransitionApproval(currentState, nextState)) {
+        log('warn', `Invalid approval transition ${currentState} -> ${nextState} for ${domain}`);
+        if (cb) cb({
+          success: false,
+          error: `Invalid approval transition ${currentState} -> ${nextState}`,
+          data: site
+        });
+        return;
+      }
+      const update = {
+        approvalStatus: nextState,
+        approvalUpdatedAt: new Date().toISOString()
+      };
+      setSite(domain, update, (updated) => {
+        log('info', `Approval transition ${currentState} -> ${nextState} for ${domain}`);
+        if (cb) cb({ success: true, data: updated });
+      });
+    });
+  };
+
   if (message.type === 'GET_CURRENT_TAB') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length > 0) {
@@ -149,24 +227,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'APPROVE_STYLE') {
     console.log('Background: Approving style for', message.payload.domain);
-    // Store approval in settings
-    setSite(message.payload.domain, {
-      approvalStatus: 'approved',
-      approvedAt: new Date().toISOString()
-    }, (site) => {
-      sendResponse({ success: true, message: 'Style approved', data: site });
+    transitionApprovalState(message.payload.domain, APPROVAL_STATES.approved, (result) => {
+      if (!result.success) {
+        sendResponse({ success: false, error: result.error, data: result.data });
+        return;
+      }
+      setSite(message.payload.domain, { approvedAt: new Date().toISOString() }, (site) => {
+        sendResponse({ success: true, message: 'Style approved', data: site });
+      });
     });
     return true;
   }
 
   if (message.type === 'REJECT_STYLE') {
     console.log('Background: Rejecting style for', message.payload.domain);
-    // Mark for regeneration
-    setSite(message.payload.domain, {
-      approvalStatus: 'rejected',
-      rejectedAt: new Date().toISOString()
-    }, (site) => {
-      sendResponse({ success: true, message: 'Style rejected', data: site });
+    transitionApprovalState(message.payload.domain, APPROVAL_STATES.rejected, (result) => {
+      if (!result.success) {
+        sendResponse({ success: false, error: result.error, data: result.data });
+        return;
+      }
+      setSite(message.payload.domain, { rejectedAt: new Date().toISOString() }, (site) => {
+        sendResponse({ success: true, message: 'Style rejected', data: site });
+      });
     });
     return true;
   }
@@ -176,7 +258,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Feedback:', message.payload.feedback);
     
     // Mark site as regenerating and send to proxy if available
-    setSite(message.payload.domain, { cacheStatus: 'regenerating' }, (site) => {
+    transitionApprovalState(message.payload.domain, APPROVAL_STATES.processing, (transitionResult) => {
+      if (!transitionResult.success) {
+        sendResponse({ success: false, error: transitionResult.error, data: transitionResult.data });
+        return;
+      }
+
+      setSite(message.payload.domain, { cacheStatus: 'regenerating' }, (site) => {
       // Attempt to send to proxy asynchronously
       if (typeof generateStyle !== 'undefined') {
         const request = {
@@ -193,7 +281,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               // Apply the generated CSS
               sendMessageToTab(currentTabId, { 
                 type: 'APPLY_STYLE', 
-                payload: { css: response.css } 
+                payload: { css: response.css, domain: message.payload.domain } 
               }).catch(err => console.error('[BG] Failed to apply proxy-generated CSS:', err));
             } else {
               console.error('[BG] Proxy generation failed:', response.error);
@@ -203,6 +291,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       
       sendResponse({ success: true, message: 'Regeneration requested', data: { feedback: message.payload.feedback, site } });
+      });
     });
     return true;
   }
@@ -230,7 +319,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     // Mark as processing
-    setSite(domain, { cacheStatus: 'processing' }, () => {
+    transitionApprovalState(domain, APPROVAL_STATES.processing, (transitionResult) => {
+      if (!transitionResult.success) {
+        sendResponse({ success: false, error: transitionResult.error, data: transitionResult.data });
+        return;
+      }
+
+      setSite(domain, { cacheStatus: 'processing' }, () => {
       const request = {
         domain,
         era,
@@ -256,6 +351,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             errorCode: 'GENERATION_ERROR'
           });
         });
+      });
     });
 
     return true; // Keep channel open for async response
@@ -276,7 +372,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then((resp) => {
         log('info', 'APPLY_STYLE delivered', resp);
         // mark site cache as applied
-        if (domain) setSite(domain, { cacheStatus: 'applied' }, () => {});
+        if (domain) {
+          setSite(domain, { cacheStatus: 'applied' }, () => {});
+          transitionApprovalState(domain, APPROVAL_STATES.pending, () => {});
+        }
         sendResponse({ success: true, message: 'Style applied', data: resp });
       })
       .catch((err) => {
@@ -296,8 +395,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     getSite(domain, (site) => {
+      const normalizedState = normalizeApprovalState(site.approvalStatus);
+      if (site.approvalStatus !== normalizedState) {
+        site.approvalStatus = normalizedState;
+        setSite(domain, { approvalStatus: normalizedState }, () => {});
+      }
       // Provide defaults
-      const status = Object.assign({ cacheStatus: 'unknown', approvalStatus: 'unknown' }, site);
+      const status = Object.assign({ cacheStatus: 'unknown', approvalStatus: APPROVAL_STATES.pending }, site);
       sendResponse({ success: true, data: status });
     });
     return true;
