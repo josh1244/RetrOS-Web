@@ -176,7 +176,7 @@ def generate_style():
     try:
         # Use LLM pipeline
         logger.debug(f"Starting CSS generation for {domain}")
-        result = generate_css_with_llm(html_content, era, dom_digest, feedback)
+        result = generate_css_with_llm(html_content, era, dom_digest, feedback, domain)
         
         # Add timing info
         generation_ms = int((time.time() - request_start_time) * 1000)
@@ -283,6 +283,80 @@ def fetch_page_endpoint():
             "status": "error",
             "error": "internal_error",
             "message": "An internal error occurred while fetching the page"
+        }), 500
+
+
+@app.route("/api/feedback-stats", methods=["GET"])
+def feedback_stats():
+    """
+    Get feedback statistics (analytics).
+    
+    Response:
+    {
+        "total_feedback": 100,
+        "by_type": {"too_modern": 30, "good": 50, ...},
+        "by_domain": {"example.com": 5, ...},
+        "by_era": {"win95": 40, "winxp": 60},
+        "recent_domains": [{"domain": "...", "count": 5}, ...]
+    }
+    """
+    try:
+        from feedback_storage import get_feedback_stats
+        stats = get_feedback_stats()
+        return jsonify(stats), 200
+    except Exception as e:
+        logger.exception(f"Failed to get feedback stats: {e}")
+        return jsonify({
+            "status": "error",
+            "error": "stats_failed",
+            "message": "Could not retrieve feedback statistics"
+        }), 500
+
+
+@app.route("/api/feedback-history", methods=["GET"])
+def feedback_history():
+    """
+    Get feedback history with optional filtering.
+    
+    Query parameters:
+    - domain: Filter by domain (optional)
+    - era: Filter by era (optional)
+    - limit: Max entries to return (default: 100, max: 1000)
+    
+    Response:
+    {
+        "status": "ok",
+        "feedback": [
+            {
+                "timestamp": "2026-02-09T10:30:45Z",
+                "domain": "example.com",
+                "era": "win95",
+                "feedback_type": "too_modern",
+                "feedback_text": "User comment...",
+                ...
+            },
+            ...
+        ]
+    }
+    """
+    try:
+        from feedback_storage import get_feedback_summary
+        
+        domain = request.args.get("domain", "").strip() or None
+        era = request.args.get("era", "").strip() or None
+        limit = min(int(request.args.get("limit", 100)), 1000)  # Max 1000
+        
+        feedback = get_feedback_summary(domain, era, limit)
+        return jsonify({
+            "status": "ok",
+            "feedback": feedback
+        }), 200
+    except Exception as e:
+        logger.exception(f"Failed to get feedback history: {e}")
+        return jsonify({
+            "status": "error",
+            "error": "history_failed",
+            "message": "Could not retrieve feedback history"
         }), 500
 
 

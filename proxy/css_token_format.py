@@ -176,17 +176,73 @@ RULE a
 Generate the CSS tokens now:
 """
     
-    if feedback:
+    if feedback and (feedback.get('type') or feedback.get('text')):
+        feedback_type = feedback.get('type', 'other')
+        feedback_text = feedback.get('text', '')
+        
+        # Build feedback adjustment instructions based on type
+        adjustments = ""
+        if feedback_type == "too_modern":
+            adjustments = """
+ADJUSTMENT (User feedback: styles too modern):
+- Use darker, more retro color schemes
+- Add more beveled 3D borders and effects
+- Increase use of era-characteristic design
+- Make buttons more prominent with bevels
+- Use system fonts appropriate to the era"""
+        
+        elif feedback_type == "too_simple":
+            adjustments = """
+ADJUSTMENT (User feedback: styles too simple):
+- Improve typography with better hierarchy
+- Add subtle box-shadows or gradients where appropriate
+- Use more decorative borders and separators
+- Enhance visual distinction between elements
+- Add more color variation and depth"""
+        
+        elif feedback_type == "simplify_layout":
+            adjustments = """
+ADJUSTMENT (User feedback: layout too complex):
+- Reduce border styles and visual noise
+- Simplify color schemes (use fewer colors)
+- Remove unnecessary decorative effects
+- Keep styling minimal but era-appropriate
+- Focus on readability and simplicity"""
+        
+        elif feedback_type == "make_usable":
+            adjustments = """
+ADJUSTMENT (User feedback: improve usability):
+- Ensure high contrast for text readability
+- Make interactive elements clearly distinguishable
+- Improve button visibility and padding
+- Ensure sufficient spacing between elements
+- Prioritize clarity and functionality over aesthetics"""
+        
+        elif feedback_type == "good":
+            adjustments = """
+ADJUSTMENT (User feedback: good result):
+- Continue with similar approach
+- Apply same style principles to other elements
+- Maintain consistency with what worked well"""
+        
+        else:
+            # Generic or custom feedback
+            adjustments = f"""
+ADJUSTMENT (User feedback: {feedback_text}):
+- Apply user's feedback to the generation
+- Incorporate their suggestions while maintaining era accuracy"""
+        
         feedback_note = f"""
+---
 FEEDBACK FROM PREVIOUS GENERATION:
-Type: {feedback.get('type', 'unknown')}
-Comment: {feedback.get('text', '')}
+Type: {feedback_type}
+{f"Comment: {feedback_text}" if feedback_text else ""}
+{adjustments}
 
-Adjust the styling accordingly:
-- If 'too_modern': Use darker, more retro colors. Add bevels/borders.
-- If 'too_simple': Improve typography. Add subtle shadows or gradients.
-- If 'simplify_layout': Reduce borders and visual noise.
-- If 'make_usable': Ensure buttons are clear, text readable, improve contrast.
+Please regenerate the CSS with these adjustments in mind.
+
+---
+Generate the improved CSS tokens now:
 """
         prompt += feedback_note
     

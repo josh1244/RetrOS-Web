@@ -21,6 +21,7 @@ from css_token_format import get_era_prompt, parse_token_output, expand_tokens_t
 from llm_engine import generate_tokens, get_model_info
 from css_validator import validate_css, sanitize_css
 from fallback_styles import get_fallback_css
+from feedback_storage import store_feedback, validate_feedback
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ def generate_css_with_llm(
     era: str,
     dom_digest: str = "",
     feedback: Dict[str, str] = None,
+    domain: str = "",
     timeout_sec: int = 5
 ) -> Dict[str, Any]:
     """
@@ -45,6 +47,7 @@ def generate_css_with_llm(
         era: Era name (win95, win98, winxp, web1996)
         dom_digest: Optional digest for caching
         feedback: Optional feedback dict {type, text}
+        domain: Optional domain for feedback storage
         timeout_sec: Timeout for LLM inference
     
     Returns:
@@ -58,8 +61,16 @@ def generate_css_with_llm(
     """
     start_time = time.time()
     
+    # Validate and normalize feedback
+    if feedback:
+        is_valid, error_msg, normalized_feedback = validate_feedback(feedback)
+        if not is_valid:
+            logger.warning(f"Invalid feedback data: {error_msg}")
+            normalized_feedback = None
+        feedback = normalized_feedback
+    
     try:
-        logger.info(f"Starting CSS generation: era={era}, html_size={len(html)} bytes")
+        logger.info(f"Starting CSS generation: era={era}, html_size={len(html)} bytes, feedback={feedback.get('type') if feedback else 'none'}")
         
         # Step 1: Validate era
         valid_eras = ["web1996", "win95", "win98", "winxp"]
@@ -76,7 +87,7 @@ def generate_css_with_llm(
         logger.debug("Formatting prompt...")
         prompt_snippet = format_summary_for_prompt(summary)
         
-        # Step 4: Build era prompt
+        # Step 4: Build era prompt (with feedback adjustment)
         logger.debug(f"Building {era} prompt...")
         prompt = get_era_prompt(era, prompt_snippet, feedback)
         logger.debug(f"Prompt size: {len(prompt)} chars")
@@ -87,11 +98,17 @@ def generate_css_with_llm(
             token_output = generate_tokens(prompt, timeout_sec=timeout_sec)
         except TimeoutError:
             logger.warning("LLM inference timed out, using fallback")
+            cache_key = summary.get("digest", "")
             elapsed = time.time() - start_time
+            
+            # Store feedback if provided
+            if feedback and domain:
+                store_feedback(domain, era, feedback, dom_digest, cache_key)
+            
             return {
                 "status": "fallback",
                 "css": get_fallback_css(era),
-                "cache_key": summary.get("digest", ""),
+                "cache_key": cache_key,
                 "metadata": {
                     "era": era,
                     "generation_ms": int((time.time() - start_time) * 1000),
@@ -101,10 +118,16 @@ def generate_css_with_llm(
             }
         except Exception as e:
             logger.error(f"LLM error: {e}")
+            cache_key = summary.get("digest", "")
+            
+            # Store feedback if provided
+            if feedback and domain:
+                store_feedback(domain, era, feedback, dom_digest, cache_key)
+            
             return {
                 "status": "fallback",
                 "css": get_fallback_css(era),
-                "cache_key": summary.get("digest", ""),
+                "cache_key": cache_key,
                 "metadata": {
                     "era": era,
                     "generation_ms": int((time.time() - start_time) * 1000),
@@ -121,10 +144,16 @@ def generate_css_with_llm(
                 raise CSSGenerationError("No CSS rules generated")
         except Exception as e:
             logger.error(f"Token parsing failed: {e}")
+            cache_key = summary.get("digest", "")
+            
+            # Store feedback if provided
+            if feedback and domain:
+                store_feedback(domain, era, feedback, dom_digest, cache_key)
+            
             return {
                 "status": "fallback",
                 "css": get_fallback_css(era),
-                "cache_key": summary.get("digest", ""),
+                "cache_key": cache_key,
                 "metadata": {
                     "era": era,
                     "generation_ms": int((time.time() - start_time) * 1000),
@@ -148,10 +177,16 @@ def generate_css_with_llm(
             valid, error_msg = validate_css(css_sanitized)
             if not valid:
                 logger.error("Sanitized CSS still invalid, using fallback")
+                cache_key = summary.get("digest", "")
+                
+                # Store feedback if provided
+                if feedback and domain:
+                    store_feedback(domain, era, feedback, dom_digest, cache_key)
+                
                 return {
                     "status": "fallback",
                     "css": get_fallback_css(era),
-                    "cache_key": summary.get("digest", ""),
+                    "cache_key": cache_key,
                     "metadata": {
                         "era": era,
                         "generation_ms": int((time.time() - start_time) * 1000),
@@ -163,12 +198,18 @@ def generate_css_with_llm(
         
         # Success!
         elapsed_ms = int((time.time() - start_time) * 1000)
+        cache_key = summary.get("digest", "")
+        
+        # Store feedback if provided
+        if feedback and domain:
+            store_feedback(domain, era, feedback, dom_digest, cache_key)
+        
         logger.info(f"CSS generation complete in {elapsed_ms}ms")
         
         return {
             "status": "ok",
             "css": css,
-            "cache_key": summary.get("digest", ""),
+            "cache_key": cache_key,
             "metadata": {
                 "era": era,
                 "generation_ms": elapsed_ms,

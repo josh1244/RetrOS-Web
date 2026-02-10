@@ -288,43 +288,55 @@ See `US-2.3-COMPLETION.md` for full implementation details.
 #### US-2.4: Proxy API Endpoints
 **Type:** Technical  
 **Story Points:** 13  
+**Status:** ✅ **COMPLETED**
 **Acceptance Criteria:**
-- [ ] POST /api/generate-style endpoint implemented
-- [ ] Request body: { domain, era, feedback?, dom_digest }
-- [ ] Response body: { css, metadata, cacheKey }
-- [ ] Status codes: 200 (success), 400 (bad request), 500 (error)
-- [ ] Request validation implemented
-- [ ] Error messages descriptive and logged
-- [ ] Response time logged
-- [ ] Rate limiting basic protection (100 req/min)
+- [X] POST /api/generate-style endpoint implemented
+- [X] Request body: { domain, era, feedback?, dom_digest }
+- [X] Response body: { css, metadata, cacheKey }
+- [X] Status codes: 200 (success), 400 (bad request), 500 (error)
+- [X] Request validation implemented
+- [X] Error messages descriptive and logged
+- [X] Response time logged
+- [X] Rate limiting basic protection (100 req/min)
 
-**Tasks:**
-- Define API schema/documentation (OpenAPI)
-- Implement POST /api/generate-style
-- Add request validation
-- Implement rate limiting
-- Add logging for all requests/responses
-- Create test cases for edge cases
+**Implementation Details:**
+- Rate limiting via Flask-Limiter (100 req/min on /api/generate-style, 50 req/min on /api/fetch-page)
+- Comprehensive input validation for domain, era, feedback, dom_digest
+- Detailed structured logging with request timing
+- Consistent error response format with descriptive messages
+- Cache key generation: {domain}-{era}-{dom_digest_truncated}
+- 42 comprehensive tests, 100% passing
+
+**See:** [proxy/US-2.4-COMPLETION.md](proxy/US-2.4-COMPLETION.md) for full implementation details
+**API Docs:** [proxy/API.md](proxy/API.md)
 
 ---
 
 #### US-2.5: Feedback Loop Integration
 **Type:** Feature  
 **Story Points:** 8  
+**Status:** ✅ **COMPLETED** — [See completion doc](US-2.5-COMPLETION.md)
 **Acceptance Criteria:**
-- [ ] Proxy can receive feedback data
-- [ ] Feedback parsed: preset type, optional free-text
-- [ ] Feedback influences next generation attempt
-- [ ] Feedback history stored (for analytics)
-- [ ] Regeneration with feedback triggers new AI pass
-- [ ] Prompt engineering adjusts based on feedback type
+- [x] Proxy can receive feedback data
+- [x] Feedback parsed: preset type, optional free-text
+- [x] Feedback influences next generation attempt
+- [x] Feedback history stored (for analytics)
+- [x] Regeneration with feedback triggers new AI pass
+- [x] Prompt engineering adjusts based on feedback type
 
 **Tasks:**
-- Extend POST /api/generate-style to accept feedback
-- Implement feedback parsing
-- Adjust AI prompts based on feedback
-- Store feedback for future analysis
-- Test regeneration workflow
+- [x] Extend POST /api/generate-style to accept feedback
+- [x] Implement feedback parsing
+- [x] Adjust AI prompts based on feedback
+- [x] Store feedback for future analysis
+- [x] Test regeneration workflow
+
+**Implementation:**
+- Created `feedback_storage.py` with robust feedback validation and storage
+- 7 feedback preset types: too_modern, too_simple, simplify_layout, make_usable, regenerate, good, other
+- Enhanced `get_era_prompt()` with type-specific adjustment instructions
+- Added feedback endpoints: GET /api/feedback-stats, GET /api/feedback-history
+- Full test coverage: 42 unit tests + 5 API tests, all passing
 
 ---
 
