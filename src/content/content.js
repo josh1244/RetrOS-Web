@@ -342,6 +342,66 @@ function createApprovalBanner(era) {
       border: 2px dashed var(--retro-border);
       background: rgba(255, 255, 255, 0.6);
       font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .feedback-title {
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .feedback-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .feedback-preset {
+      border: 2px solid var(--retro-border);
+      background: var(--retro-panel);
+      font-family: var(--retro-font);
+      font-size: 11px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .feedback-preset.active {
+      background: var(--retro-accent);
+      color: #ffffff;
+    }
+    .feedback-input {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .feedback-textarea {
+      min-height: 64px;
+      border: 2px solid var(--retro-border);
+      padding: 6px;
+      font-family: var(--retro-font);
+      font-size: 12px;
+      resize: vertical;
+      background: #ffffff;
+      color: var(--retro-text);
+    }
+    .feedback-counter {
+      font-size: 11px;
+      text-align: right;
+      opacity: 0.7;
+    }
+    .feedback-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .feedback-error {
+      color: #7a0000;
+      font-size: 11px;
+    }
+    .feedback-status {
+      font-size: 11px;
+      opacity: 0.8;
     }
     .feedback[hidden] {
       display: none;
@@ -379,7 +439,23 @@ function createApprovalBanner(era) {
           <button class="btn" id="retros-feedback" aria-expanded="false" aria-controls="retros-feedback-panel">Feedback</button>
         </div>
         <div class="feedback" id="retros-feedback-panel" hidden>
-          Feedback options will appear here after the next update.
+          <div class="feedback-title">Style Feedback</div>
+          <div class="feedback-presets" role="group" aria-label="Feedback presets">
+            <button class="feedback-preset" data-feedback="too_modern" aria-pressed="false">Too Modern</button>
+            <button class="feedback-preset" data-feedback="too_simple" aria-pressed="false">Too Simple</button>
+            <button class="feedback-preset" data-feedback="simplify_layout" aria-pressed="false">Simplify Layout</button>
+            <button class="feedback-preset" data-feedback="make_usable" aria-pressed="false">Make it More Usable</button>
+            <button class="feedback-preset" data-feedback="regenerate" aria-pressed="false">Regenerate</button>
+          </div>
+          <div class="feedback-input">
+            <textarea class="feedback-textarea" id="retros-feedback-text" placeholder="Optional details (max 200 chars)" maxlength="200"></textarea>
+            <div class="feedback-counter"><span id="retros-feedback-count">200</span> remaining</div>
+          </div>
+          <div class="feedback-actions">
+            <button class="btn primary" id="retros-feedback-submit">Regenerate & Apply</button>
+            <span class="feedback-status" id="retros-feedback-status" role="status" aria-live="polite"></span>
+          </div>
+          <div class="feedback-error" id="retros-feedback-error" role="alert"></div>
         </div>
       </div>
       <button class="close" id="retros-close" aria-label="Close approval banner">×</button>
@@ -394,6 +470,85 @@ function createApprovalBanner(era) {
   const feedbackBtn = shadow.getElementById('retros-feedback');
   const closeBtn = shadow.getElementById('retros-close');
   const feedbackPanel = shadow.getElementById('retros-feedback-panel');
+  const feedbackPresets = Array.from(shadow.querySelectorAll('.feedback-preset'));
+  const feedbackText = shadow.getElementById('retros-feedback-text');
+  const feedbackCount = shadow.getElementById('retros-feedback-count');
+  const feedbackSubmit = shadow.getElementById('retros-feedback-submit');
+  const feedbackError = shadow.getElementById('retros-feedback-error');
+  const feedbackStatus = shadow.getElementById('retros-feedback-status');
+  let selectedPreset = null;
+
+  const updateCounter = () => {
+    const remaining = 200 - (feedbackText.value || '').length;
+    feedbackCount.textContent = String(remaining);
+  };
+
+  const clearError = () => {
+    feedbackError.textContent = '';
+  };
+
+  const setStatus = (message) => {
+    feedbackStatus.textContent = message || '';
+  };
+
+  const setSelectedPreset = (button) => {
+    feedbackPresets.forEach((btn) => {
+      const active = btn === button;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    selectedPreset = button ? button.getAttribute('data-feedback') : null;
+    clearError();
+  };
+
+  feedbackPresets.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setSelectedPreset(btn);
+    });
+  });
+
+  feedbackText.addEventListener('input', () => {
+    updateCounter();
+    clearError();
+  });
+
+  updateCounter();
+  setStatus('');
+
+  const validateFeedback = () => {
+    const textValue = (feedbackText.value || '').trim();
+    if (!selectedPreset && !textValue) {
+      feedbackError.textContent = 'Select a preset or add feedback text.';
+      return false;
+    }
+    return true;
+  };
+
+  feedbackSubmit.addEventListener('click', async () => {
+    if (!validateFeedback()) return;
+    const textValue = (feedbackText.value || '').trim();
+    const type = selectedPreset || (textValue ? 'other' : 'regenerate');
+    const feedbackPayload = { type };
+    if (textValue) feedbackPayload.text = textValue;
+
+    feedbackSubmit.disabled = true;
+    setStatus('Regenerating...');
+    clearError();
+
+    const domain = window.location.hostname;
+    const response = await sendRuntimeMessage({
+      type: 'REGENERATE_STYLE',
+      payload: { domain, era, feedback: feedbackPayload }
+    });
+
+    if (response && response.success) {
+      setStatus('Regeneration requested.');
+    } else {
+      feedbackError.textContent = 'Failed to request regeneration.';
+      setStatus('');
+    }
+    feedbackSubmit.disabled = false;
+  });
 
   approveBtn.addEventListener('click', async () => {
     const domain = window.location.hostname;
@@ -412,12 +567,14 @@ function createApprovalBanner(era) {
     });
     feedbackPanel.hidden = false;
     feedbackBtn.setAttribute('aria-expanded', 'true');
+    feedbackText.focus();
   });
 
   feedbackBtn.addEventListener('click', () => {
     const nextState = !feedbackPanel.hidden;
     feedbackPanel.hidden = nextState;
     feedbackBtn.setAttribute('aria-expanded', String(!nextState));
+    if (!nextState) feedbackText.focus();
   });
 
   closeBtn.addEventListener('click', () => {

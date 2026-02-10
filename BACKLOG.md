@@ -342,19 +342,20 @@ See `US-2.3-COMPLETION.md` for full implementation details.
 
 ### Epic 3: Approval Workflow & Caching
 
-#### US-3.1: Approval Popup Component
+#### US-3.1: Approval Popup Component ([completion](US-3.1-COMPLETION.md))
 **Type:** Feature  
 **Story Points:** 13  
+**Status:** ✅ **COMPLETED**
 **Acceptance Criteria:**
-- [ ] Popup banner appears at top of page on first visit with unapproved style
-- [ ] Shows "Styling applied for [Era]" message
-- [ ] Displays small preview thumbnail of styled page
-- [ ] Three action buttons: Approve, Reject, Feedback
-- [ ] Era styling applies to popup itself
-- [ ] Collapsible feedback section below buttons
-- [ ] Close (X) button hides popup
-- [ ] Popup reappears on next page load if not approved
-- [ ] Keyboard accessible (Tab, Enter, Escape)
+- [x] Popup banner appears at top of page on first visit with unapproved style
+- [x] Shows "Styling applied for [Era]" message
+- [x] Displays small preview thumbnail of styled page
+- [x] Three action buttons: Approve, Reject, Feedback
+- [x] Era styling applies to popup itself
+- [x] Collapsible feedback section below buttons
+- [x] Close (X) button hides popup
+- [x] Popup reappears on next page load if not approved
+- [x] Keyboard accessible (Tab, Enter, Escape)
 
 **Tasks:**
 - Design popup HTML structure
@@ -366,17 +367,18 @@ See `US-2.3-COMPLETION.md` for full implementation details.
 
 ---
 
-#### US-3.2: Feedback UI Form
+#### US-3.2: Feedback UI Form ([completion](US-3.2-COMPLETION.md))
 **Type:** Feature  
 **Story Points:** 8  
+**Status:** ✅ **COMPLETED**
 **Acceptance Criteria:**
-- [ ] Preset buttons visible: "Too Modern", "Too Simple", "Simplify Layout", "Make it More Usable", "Regenerate"
-- [ ] Optional free-text input field (200 char limit)
-- [ ] Submit button: "Regenerate & Apply"
-- [ ] Character counter shows remaining characters
-- [ ] Form validation prevents empty submissions
-- [ ] Visual feedback on button click (hover/active states)
-- [ ] Keyboard navigation works (Tab, Space, Enter)
+- [x] Preset buttons visible: "Too Modern", "Too Simple", "Simplify Layout", "Make it More Usable", "Regenerate"
+- [x] Optional free-text input field (200 char limit)
+- [x] Submit button: "Regenerate & Apply"
+- [x] Character counter shows remaining characters
+- [x] Form validation prevents empty submissions
+- [x] Visual feedback on button click (hover/active states)
+- [x] Keyboard navigation works (Tab, Space, Enter)
 
 **Tasks:**
 - Create feedback form HTML
