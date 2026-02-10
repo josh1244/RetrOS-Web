@@ -13,6 +13,9 @@
   --text-secondary: #666666;
   --border-color: #cccccc;
   --accent-color: #0066cc;
+  --border-radius: 4px;
+  --border-width: 1px;
+  --shadow-raised: none;
   
   /* Spacing */
   --spacing-xs: 4px;
@@ -56,7 +59,7 @@ body {
   align-items: center;
   padding: var(--spacing-md);
   background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: var(--border-width) solid var(--border-color);
 }
 
 .popup-title {
@@ -67,10 +70,10 @@ body {
 
 .settings-btn {
   background: none;
-  border: 1px solid var(--border-color);
+  border: var(--border-width) solid var(--border-color);
   padding: var(--spacing-sm);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--border-radius);
   font-size: 18px;
   display: flex;
   align-items: center;
@@ -125,8 +128,8 @@ body {
 .info-value {
   padding: var(--spacing-sm);
   background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius);
   word-break: break-all;
 }
 
@@ -142,8 +145,8 @@ body {
   margin-top: var(--spacing-md);
   padding: var(--spacing-md);
   background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius);
 }
 
 /* Approval Section */
@@ -162,13 +165,13 @@ body {
 
 .close-btn {
   background: none;
-  border: 1px solid var(--border-color);
+  border: var(--border-width) solid var(--border-color);
   padding: 0;
   width: 28px;
   height: 28px;
   font-size: 20px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--border-radius);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -192,7 +195,7 @@ body {
   margin: 0 0 var(--spacing-md) 0;
   padding: var(--spacing-sm);
   background-color: var(--bg-primary);
-  border-left: 4px solid var(--accent-color);
+  border-left: calc(var(--border-width) * 4) solid var(--accent-color);
   font-size: var(--font-size-body);
   line-height: 1.5;
 }
@@ -206,8 +209,8 @@ body {
 /* Button Styles */
 .btn {
   padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius);
   cursor: pointer;
   font-size: var(--font-size-body);
   font-weight: 500;
@@ -244,6 +247,7 @@ body {
   background-color: var(--accent-color);
   color: #ffffff;
   border-color: var(--accent-color);
+  box-shadow: var(--shadow-raised);
 }
 
 .btn-primary:hover {
@@ -276,9 +280,9 @@ body {
 
 .feedback-preset {
   padding: var(--spacing-sm);
-  border: 2px solid var(--border-color);
+  border: calc(var(--border-width) * 2) solid var(--border-color);
   background-color: var(--bg-primary);
-  border-radius: 4px;
+  border-radius: var(--border-radius);
   cursor: pointer;
   font-size: var(--font-size-small);
   font-weight: 500;
@@ -316,8 +320,8 @@ body {
 .feedback-textarea {
   width: 100%;
   padding: var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius);
   font-family: var(--font-family);
   font-size: var(--font-size-body);
   resize: vertical;
@@ -361,9 +365,9 @@ body {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  border: 2px solid var(--border-color);
+  border: calc(var(--border-width) * 2) solid var(--border-color);
   background: var(--bg-primary);
-  border-radius: 6px;
+  border-radius: calc(var(--border-radius) + 2px);
   cursor: pointer;
   text-align: left;
 }
@@ -381,15 +385,15 @@ body {
 .era-preview {
   width: 56px;
   height: 36px;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  border: var(--border-width) solid var(--border-color);
 }
 
 .era-label {
   font-weight: 600;
 }
 
-.era-90s { background: linear-gradient(90deg,#ffdd66,#ff9966); }
+.era-web1996 { background: linear-gradient(90deg,#ffdd66,#ff9966); }
 .era-win95 { background: linear-gradient(90deg,#d8e6f3,#c4d7f0); }
 .era-win98 { background: linear-gradient(90deg,#f0e1c6,#e6d4b0); }
 .era-winxp { background: linear-gradient(90deg,#b7e1cd,#88d0b6); }

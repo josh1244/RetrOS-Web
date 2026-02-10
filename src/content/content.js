@@ -136,7 +136,7 @@ console.log('RetrOS-Web content script ready');
 /* ---------------------- Approval banner (US-3.1) ---------------------- */
 
 const ERA_THEMES = {
-  '90s': {
+  web1996: {
     bg: '#f5efe1',
     panel: '#fff8e6',
     border: '#2f4f4f',
@@ -144,7 +144,7 @@ const ERA_THEMES = {
     text: '#1a1a1a',
     font: 'Verdana, Tahoma, Arial, sans-serif'
   },
-  'windows95': {
+  win95: {
     bg: '#c0c0c0',
     panel: '#e6e6e6',
     border: '#000000',
@@ -152,7 +152,7 @@ const ERA_THEMES = {
     text: '#000000',
     font: 'Tahoma, "MS Sans Serif", Arial, sans-serif'
   },
-  'windows98': {
+  win98: {
     bg: '#c0c0c0',
     panel: '#f3f3f3',
     border: '#000000',
@@ -160,7 +160,7 @@ const ERA_THEMES = {
     text: '#000000',
     font: 'Tahoma, "MS Sans Serif", Arial, sans-serif'
   },
-  'windowsxp': {
+  winxp: {
     bg: '#e7f0ff',
     panel: '#ffffff',
     border: '#3a6ea5',
@@ -170,22 +170,76 @@ const ERA_THEMES = {
   }
 };
 
+let eraTokensCache = null;
+
+function normalizeEraInput(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '')
+    .trim();
+}
+
 let approvalBannerHost = null;
 let approvalBannerVisible = false;
 
+async function loadEraTokens() {
+  if (eraTokensCache) return eraTokensCache;
+  try {
+    const url = chrome.runtime.getURL('data/era_tokens.json');
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Token fetch failed: ${response.status}`);
+    eraTokensCache = await response.json();
+    return eraTokensCache;
+  } catch (error) {
+    console.warn('Failed to load era tokens, using fallback theme', error);
+    eraTokensCache = null;
+    return null;
+  }
+}
+
 function normalizeEra(era) {
-  if (!era || typeof era !== 'string') return 'windows95';
-  const cleaned = era.toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
-  if (cleaned.includes('90')) return '90s';
-  if (cleaned.includes('win95') || cleaned.includes('windows95')) return 'windows95';
-  if (cleaned.includes('win98') || cleaned.includes('windows98')) return 'windows98';
-  if (cleaned.includes('winxp') || cleaned.includes('windowsxp')) return 'windowsxp';
-  return 'windows95';
+  if (!era || typeof era !== 'string') return 'win95';
+  const cleaned = normalizeEraInput(era);
+  if (!cleaned) return 'win95';
+
+  const eras = eraTokensCache && eraTokensCache.eras ? eraTokensCache.eras : {};
+  for (const key of Object.keys(eras)) {
+    if (normalizeEraInput(key) === cleaned) return key;
+    const label = eras[key].label;
+    if (label && normalizeEraInput(label) === cleaned) return key;
+    const aliases = eras[key].aliases || [];
+    for (const alias of aliases) {
+      if (normalizeEraInput(alias) === cleaned) return key;
+    }
+  }
+
+  if (cleaned.includes('90')) return 'web1996';
+  if (cleaned.includes('win95') || cleaned.includes('windows95')) return 'win95';
+  if (cleaned.includes('win98') || cleaned.includes('windows98')) return 'win98';
+  if (cleaned.includes('winxp') || cleaned.includes('windowsxp')) return 'winxp';
+  return 'win95';
+}
+
+function themeFromTokens(tokens) {
+  const colors = tokens.colors || {};
+  const fonts = tokens.fonts || {};
+  const baseFonts = fonts.base && fonts.base.length ? fonts.base : ['Tahoma', 'Arial', 'sans-serif'];
+
+  return {
+    bg: colors.background || colors.surface || '#ffffff',
+    panel: colors.surface || colors.secondary || colors.background || '#ffffff',
+    border: colors.border || '#000000',
+    accent: colors.accent || colors.primary || '#000080',
+    text: colors.text || '#000000',
+    font: baseFonts.join(', ')
+  };
 }
 
 function getEraTheme(era) {
   const key = normalizeEra(era);
-  return ERA_THEMES[key] || ERA_THEMES.windows95;
+  const eras = eraTokensCache && eraTokensCache.eras ? eraTokensCache.eras : {};
+  if (eras[key]) return themeFromTokens(eras[key]);
+  return ERA_THEMES[key] || ERA_THEMES.win95;
 }
 
 function sendRuntimeMessage(message) {
@@ -600,13 +654,14 @@ function hideApprovalBanner() {
 
 async function initApprovalBanner() {
   try {
+    await loadEraTokens();
     const domain = window.location.hostname;
     const [settings, siteStatus] = await Promise.all([
       sendRuntimeMessage({ type: 'GET_SETTINGS' }),
       sendRuntimeMessage({ type: 'GET_SITE_STATUS', payload: { domain } })
     ]);
 
-    const era = (settings && settings.data && settings.data.selectedEra) || 'Windows 95';
+    const era = (settings && settings.data && settings.data.selectedEra) || 'win95';
     const status = siteStatus && siteStatus.data ? siteStatus.data : {};
 
     if (shouldShowBanner(status)) {

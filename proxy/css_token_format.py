@@ -5,8 +5,10 @@ Defines how the LLM outputs CSS (token format) and prompt engineering
 for each era to ensure consistent, era-appropriate styling.
 """
 
+import json
 import logging
-from typing import Dict, List, Any
+from pathlib import Path
+from typing import Dict, List, Any, Optional
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -31,8 +33,8 @@ class CSSToken(Enum):
     HEIGHT = "HEIGHT"
 
 
-# Era-specific design guidelines and color palettes
-ERA_DESIGN = {
+# Era-specific design guidelines and color palettes (fallback)
+DEFAULT_ERA_DESIGN = {
     "web1996": {
         "name": "Classic 1990s Web",
         "colors": {
@@ -111,6 +113,120 @@ ERA_DESIGN = {
     },
 }
 
+_ERA_TOKENS_CACHE: Optional[Dict[str, Any]] = None
+
+
+def _find_tokens_path() -> Optional[Path]:
+    candidates = [
+        Path(__file__).resolve().parent / "era_tokens.json",
+        Path(__file__).resolve().parent.parent / "src" / "data" / "era_tokens.json",
+        Path(__file__).resolve().parent.parent / "data" / "era_tokens.json",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def load_era_tokens() -> Optional[Dict[str, Any]]:
+    global _ERA_TOKENS_CACHE
+    if _ERA_TOKENS_CACHE is not None:
+        return _ERA_TOKENS_CACHE
+
+    tokens_path = _find_tokens_path()
+    if not tokens_path:
+        logger.warning("Era tokens file not found; using fallback design")
+        _ERA_TOKENS_CACHE = None
+        return None
+
+    try:
+        with tokens_path.open("r", encoding="utf-8") as handle:
+            _ERA_TOKENS_CACHE = json.load(handle)
+            return _ERA_TOKENS_CACHE
+    except Exception as exc:
+        logger.warning("Failed to load era tokens: %s", exc)
+        _ERA_TOKENS_CACHE = None
+        return None
+
+
+def _normalize_era_input(value: str) -> str:
+    return (
+        str(value or "")
+        .lower()
+        .replace(" ", "")
+        .replace("-", "")
+        .replace("_", "")
+        .strip()
+    )
+
+
+def normalize_era_key(era: str) -> str:
+    cleaned = _normalize_era_input(era)
+    if not cleaned:
+        return "win95"
+
+    tokens = load_era_tokens() or {}
+    eras = tokens.get("eras", {})
+    for key, data in eras.items():
+        if _normalize_era_input(key) == cleaned:
+            return key
+        label = data.get("label")
+        if label and _normalize_era_input(label) == cleaned:
+            return key
+        for alias in data.get("aliases", []) or []:
+            if _normalize_era_input(alias) == cleaned:
+                return key
+
+    if "90" in cleaned:
+        return "web1996"
+    if "win95" in cleaned or "windows95" in cleaned:
+        return "win95"
+    if "win98" in cleaned or "windows98" in cleaned:
+        return "win98"
+    if "winxp" in cleaned or "windowsxp" in cleaned:
+        return "winxp"
+    return "win95"
+
+
+def get_valid_eras() -> List[str]:
+    tokens = load_era_tokens() or {}
+    eras = tokens.get("eras", {})
+    if eras:
+        return list(eras.keys())
+    return list(DEFAULT_ERA_DESIGN.keys())
+
+
+def _design_from_tokens(era_key: str) -> Optional[Dict[str, Any]]:
+    tokens = load_era_tokens() or {}
+    era_data = tokens.get("eras", {}).get(era_key)
+    if not era_data:
+        return None
+
+    colors = era_data.get("colors", {})
+    fonts = era_data.get("fonts", {}).get("base", [])
+    return {
+        "name": era_data.get("label", era_key),
+        "colors": {
+            "primary": colors.get("primary", "#000000"),
+            "secondary": colors.get("secondary", colors.get("surface", "#ffffff")),
+            "accent": colors.get("accent", colors.get("primary", "#000000")),
+            "background": colors.get("background", colors.get("surface", "#ffffff")),
+            "text": colors.get("text", "#000000"),
+        },
+        "fonts": fonts or ["Arial", "Helvetica"],
+        "characteristics": era_data.get("characteristics", []),
+    }
+
+
+def get_era_design(era: str) -> Dict[str, Any]:
+    era_key = normalize_era_key(era)
+    design = _design_from_tokens(era_key)
+    if design:
+        return design
+    if era_key in DEFAULT_ERA_DESIGN:
+        return DEFAULT_ERA_DESIGN[era_key]
+    raise ValueError(f"Unknown era: {era}")
+
 
 def get_era_prompt(era: str, dom_summary: str, feedback: Dict[str, str] = None) -> str:
     """
@@ -124,10 +240,7 @@ def get_era_prompt(era: str, dom_summary: str, feedback: Dict[str, str] = None) 
     Returns:
         A structured prompt for the LLM
     """
-    if era not in ERA_DESIGN:
-        raise ValueError(f"Unknown era: {era}")
-    
-    design = ERA_DESIGN[era]
+    design = get_era_design(era)
     colors = design["colors"]
     
     prompt = f"""You are a CSS styling expert. Generate era-appropriate CSS for a webpage.
@@ -166,7 +279,7 @@ EXAMPLE FORMAT:
 RULE body
   PROPERTY: BACKGROUND {colors['background']}
   PROPERTY: COLOR {colors['text']}
-  PROPERTY: FONT_FAMILY "{design['fonts'][0]}"
+    PROPERTY: FONT_FAMILY "{design['fonts'][0]}"
 
 RULE a
   PROPERTY: COLOR {colors['accent']}

@@ -1,28 +1,28 @@
 {
   "eras": [
     {
-      "id": "90s",
+      "id": "web1996",
       "name": "Classic 90s Web",
       "year_range": "1994-1997",
-      "preview_colors": ["#FF0000", "#00FF00", "#0000FF", "#FFFF00"]
+      "preview_colors": ["#00FF00", "#FF00FF", "#000000", "#FFFF00"]
     },
     {
-      "id": "windows95",
+      "id": "win95",
       "name": "Windows 95",
       "year_range": "1995-1998",
       "preview_colors": ["#C0C0C0", "#000080", "#FFFFFF", "#808080"]
     },
     {
-      "id": "windows98",
+      "id": "win98",
       "name": "Windows 98",
       "year_range": "1998-2000",
-      "preview_colors": ["#C0C0C0", "#000080", "#FFFFFF", "#0066CC"]
+      "preview_colors": ["#CCCCCC", "#000080", "#FFFFFF", "#0066CC"]
     },
     {
-      "id": "windowsxp",
+      "id": "winxp",
       "name": "Windows XP",
       "year_range": "2001-2006",
-      "preview_colors": ["#0078D4", "#FFFFFF", "#F0F0F0", "#0066CC"]
+      "preview_colors": ["#0078D4", "#FFFFFF", "#F0F0F0", "#3A6EA5"]
     }
   ]
 }

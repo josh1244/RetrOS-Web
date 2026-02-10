@@ -17,7 +17,13 @@ import time
 from typing import Dict, Any, Optional
 
 from dom_reducer import reduce_dom, format_summary_for_prompt
-from css_token_format import get_era_prompt, parse_token_output, expand_tokens_to_css
+from css_token_format import (
+    get_era_prompt,
+    parse_token_output,
+    expand_tokens_to_css,
+    normalize_era_key,
+    get_valid_eras
+)
 from llm_engine import generate_tokens, get_model_info
 from css_validator import validate_css, sanitize_css
 from fallback_styles import get_fallback_css
@@ -70,11 +76,18 @@ def generate_css_with_llm(
         feedback = normalized_feedback
     
     try:
-        logger.info(f"Starting CSS generation: era={era}, html_size={len(html)} bytes, feedback={feedback.get('type') if feedback else 'none'}")
+        normalized_era = normalize_era_key(era)
+        logger.info(
+            "Starting CSS generation: era=%s (normalized=%s), html_size=%s bytes, feedback=%s",
+            era,
+            normalized_era,
+            len(html),
+            feedback.get('type') if feedback else 'none'
+        )
         
         # Step 1: Validate era
-        valid_eras = ["web1996", "win95", "win98", "winxp"]
-        if era not in valid_eras:
+        valid_eras = get_valid_eras()
+        if normalized_era not in valid_eras:
             raise CSSGenerationError(f"Unknown era: {era}. Valid: {valid_eras}")
         
         # Step 2: Reduce DOM
@@ -89,8 +102,8 @@ def generate_css_with_llm(
         prompt_snippet = format_summary_for_prompt(summary)
         
         # Step 4: Build era prompt (with feedback adjustment)
-        logger.debug(f"Building {era} prompt...")
-        prompt = get_era_prompt(era, prompt_snippet, feedback)
+        logger.debug(f"Building {normalized_era} prompt...")
+        prompt = get_era_prompt(normalized_era, prompt_snippet, feedback)
         logger.debug(f"Prompt size: {len(prompt)} chars")
         
         # Step 5: Run LLM inference
@@ -104,14 +117,14 @@ def generate_css_with_llm(
             
             # Store feedback if provided
             if feedback and domain:
-                store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
+                store_feedback(domain, normalized_era, feedback, dom_digest or cache_key, cache_key)
             
             return {
                 "status": "fallback",
-                "css": get_fallback_css(era),
+                "css": get_fallback_css(normalized_era),
                 "cache_key": cache_key,
                 "metadata": {
-                    "era": era,
+                    "era": normalized_era,
                     "generation_ms": int((time.time() - start_time) * 1000),
                     "fallback": True,
                     "fallback_reason": "timeout",
@@ -124,14 +137,14 @@ def generate_css_with_llm(
             
             # Store feedback if provided
             if feedback and domain:
-                store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
+                store_feedback(domain, normalized_era, feedback, dom_digest or cache_key, cache_key)
             
             return {
                 "status": "fallback",
-                "css": get_fallback_css(era),
+                "css": get_fallback_css(normalized_era),
                 "cache_key": cache_key,
                 "metadata": {
-                    "era": era,
+                    "era": normalized_era,
                     "generation_ms": int((time.time() - start_time) * 1000),
                     "fallback": True,
                     "fallback_reason": str(e)[:50],
@@ -151,14 +164,14 @@ def generate_css_with_llm(
             
             # Store feedback if provided
             if feedback and domain:
-                store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
+                store_feedback(domain, normalized_era, feedback, dom_digest or cache_key, cache_key)
             
             return {
                 "status": "fallback",
-                "css": get_fallback_css(era),
+                "css": get_fallback_css(normalized_era),
                 "cache_key": cache_key,
                 "metadata": {
-                    "era": era,
+                    "era": normalized_era,
                     "generation_ms": int((time.time() - start_time) * 1000),
                     "fallback": True,
                     "fallback_reason": "parse_error",
@@ -185,14 +198,14 @@ def generate_css_with_llm(
                 
                 # Store feedback if provided
                 if feedback and domain:
-                    store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
+                    store_feedback(domain, normalized_era, feedback, dom_digest or cache_key, cache_key)
                 
                 return {
                     "status": "fallback",
-                    "css": get_fallback_css(era),
+                    "css": get_fallback_css(normalized_era),
                     "cache_key": cache_key,
                     "metadata": {
-                        "era": era,
+                        "era": normalized_era,
                         "generation_ms": int((time.time() - start_time) * 1000),
                         "fallback": True,
                         "fallback_reason": "validation_failed",
@@ -207,7 +220,7 @@ def generate_css_with_llm(
         
         # Store feedback if provided
         if feedback and domain:
-            store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
+            store_feedback(domain, normalized_era, feedback, dom_digest or cache_key, cache_key)
         
         logger.info(f"CSS generation complete in {elapsed_ms}ms")
         
@@ -216,7 +229,7 @@ def generate_css_with_llm(
             "css": css,
             "cache_key": cache_key,
             "metadata": {
-                "era": era,
+                "era": normalized_era,
                 "generation_ms": elapsed_ms,
                 "fallback": False,
                 "rules_count": len(rules),
@@ -232,7 +245,7 @@ def generate_css_with_llm(
             "css": None,
             "error": str(e)[:100],
             "metadata": {
-                "era": era,
+                "era": normalized_era if 'normalized_era' in locals() else era,
                 "generation_ms": int((time.time() - start_time) * 1000),
             },
         }

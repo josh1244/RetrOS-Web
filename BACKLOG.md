@@ -481,16 +481,17 @@ See `US-2.3-COMPLETION.md` for full implementation details.
 
 ### Epic 4: Era System & Styling
 
-#### US-4.1: Era Design Tokens System
+#### US-4.1: Era Design Tokens System ([completion](US-4.1-COMPLETION.md))
 **Type:** Technical  
 **Story Points:** 13  
+**Status:** ✅ **COMPLETED**
 **Acceptance Criteria:**
-- [ ] Design tokens defined for each era (colors, fonts, spacing, borders)
-- [ ] Tokens exported as JSON configuration
-- [ ] AI system can read era tokens
-- [ ] CSS variables generated from tokens
-- [ ] Tokens applied consistently across extension UI
-- [ ] Add era: Edit tokens, no code changes required
+- [x] Design tokens defined for each era (colors, fonts, spacing, borders)
+- [x] Tokens exported as JSON configuration
+- [x] AI system can read era tokens
+- [x] CSS variables generated from tokens
+- [x] Tokens applied consistently across extension UI
+- [x] Add era: Edit tokens, no code changes required
 
 **Tasks:**
 - Define era token schema

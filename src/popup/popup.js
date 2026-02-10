@@ -17,6 +17,145 @@ let currentEra = '';
 let feedbackOpen = false;
 let selectedFeedback = null;
 
+const DEFAULT_ERA_KEY = 'win95';
+let eraTokensCache = null;
+
+function normalizeEraInput(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '')
+    .trim();
+}
+
+async function loadEraTokens() {
+  if (eraTokensCache) return eraTokensCache;
+  try {
+    const url = chrome.runtime.getURL('data/era_tokens.json');
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Token fetch failed: ${response.status}`);
+    eraTokensCache = await response.json();
+    return eraTokensCache;
+  } catch (error) {
+    console.warn('Failed to load era tokens, using defaults', error);
+    eraTokensCache = null;
+    return null;
+  }
+}
+
+function normalizeEraKey(era) {
+  const cleaned = normalizeEraInput(era);
+  if (!cleaned) return DEFAULT_ERA_KEY;
+
+  const eras = eraTokensCache && eraTokensCache.eras ? eraTokensCache.eras : {};
+  for (const key of Object.keys(eras)) {
+    if (normalizeEraInput(key) === cleaned) return key;
+    const label = eras[key].label;
+    if (label && normalizeEraInput(label) === cleaned) return key;
+    const aliases = eras[key].aliases || [];
+    for (const alias of aliases) {
+      if (normalizeEraInput(alias) === cleaned) return key;
+    }
+  }
+
+  if (cleaned.includes('90')) return 'web1996';
+  if (cleaned.includes('win95') || cleaned.includes('windows95')) return 'win95';
+  if (cleaned.includes('win98') || cleaned.includes('windows98')) return 'win98';
+  if (cleaned.includes('winxp') || cleaned.includes('windowsxp')) return 'winxp';
+  return DEFAULT_ERA_KEY;
+}
+
+function getEraLabel(eraKey) {
+  const eras = eraTokensCache && eraTokensCache.eras ? eraTokensCache.eras : {};
+  if (eras[eraKey] && eras[eraKey].label) return eras[eraKey].label;
+  const fallback = {
+    web1996: 'Classic 90s Web',
+    win95: 'Windows 95',
+    win98: 'Windows 98',
+    winxp: 'Windows XP'
+  };
+  return fallback[eraKey] || 'Unknown Era';
+}
+
+function applyEraTokens(eraKey) {
+  const eras = eraTokensCache && eraTokensCache.eras ? eraTokensCache.eras : {};
+  const tokens = eras[eraKey];
+  if (!tokens) return;
+
+  const root = document.documentElement;
+  const colors = tokens.colors || {};
+  const spacing = tokens.spacing || {};
+  const borders = tokens.borders || {};
+  const shadows = tokens.shadows || {};
+  const fonts = tokens.fonts || {};
+
+  const bgPrimary = colors.background || colors.surface || '#ffffff';
+  const bgSecondary = colors.surface || colors.secondary || bgPrimary;
+
+  root.style.setProperty('--bg-primary', bgPrimary);
+  root.style.setProperty('--bg-secondary', bgSecondary);
+  root.style.setProperty('--text-primary', colors.text || '#000000');
+  root.style.setProperty('--text-secondary', colors.muted_text || colors.text || '#333333');
+  root.style.setProperty('--border-color', colors.border || '#cccccc');
+  root.style.setProperty('--accent-color', colors.accent || colors.primary || '#0066cc');
+
+  if (spacing.xs) root.style.setProperty('--spacing-xs', spacing.xs);
+  if (spacing.sm) root.style.setProperty('--spacing-sm', spacing.sm);
+  if (spacing.md) root.style.setProperty('--spacing-md', spacing.md);
+  if (spacing.lg) root.style.setProperty('--spacing-lg', spacing.lg);
+
+  const baseFonts = fonts.base && fonts.base.length ? fonts.base : ['Segoe UI', 'Arial', 'sans-serif'];
+  root.style.setProperty('--font-family', baseFonts.join(', '));
+
+  if (borders.radius) root.style.setProperty('--border-radius', borders.radius);
+  if (borders.width) root.style.setProperty('--border-width', borders.width);
+  if (shadows.raised) root.style.setProperty('--shadow-raised', shadows.raised);
+}
+
+function getEraPreviewGradient(tokens) {
+  const colors = tokens.colors || {};
+  const primary = colors.primary || '#cccccc';
+  const secondary = colors.secondary || colors.surface || primary;
+  const accent = colors.accent || colors.primary || secondary;
+  return `linear-gradient(90deg, ${primary}, ${secondary}, ${accent})`;
+}
+
+function buildEraOptions(container, initialKey) {
+  if (!container) return [];
+
+  const eras = eraTokensCache && eraTokensCache.eras ? eraTokensCache.eras : null;
+  if (!eras) {
+    return Array.from(container.querySelectorAll('.era-card'));
+  }
+
+  container.innerHTML = '';
+  const keys = Object.keys(eras);
+  const fallbackKey = keys[0] || DEFAULT_ERA_KEY;
+  const selectedKey = keys.includes(initialKey) ? initialKey : fallbackKey;
+
+  keys.forEach((key) => {
+    const data = eras[key];
+    const button = document.createElement('button');
+    button.className = 'era-card';
+    button.setAttribute('role', 'radio');
+    button.setAttribute('data-era', key);
+    button.setAttribute('aria-checked', key === selectedKey ? 'true' : 'false');
+    button.tabIndex = key === selectedKey ? 0 : -1;
+
+    const preview = document.createElement('div');
+    preview.className = 'era-preview';
+    preview.style.background = getEraPreviewGradient(data);
+
+    const label = document.createElement('div');
+    label.className = 'era-label';
+    label.textContent = data.label || key;
+
+    button.append(preview, label);
+    container.appendChild(button);
+  });
+
+  return Array.from(container.querySelectorAll('.era-card'));
+}
+
 /**
  * Initialize popup on load
  */
@@ -63,13 +202,16 @@ async function initializePopup() {
     }
 
     // Get current era
+    await loadEraTokens();
     const settings = await sendMessage({ type: 'GET_SETTINGS' });
     if (settings.success) {
-      const era = settings.data.selectedEra || 'Not selected';
-      currentEra = era;
-      document.getElementById('current-era').textContent = era;
-      document.getElementById('approval-era').textContent = era;
-      console.log(`Current era: ${era}`);
+      const eraKey = normalizeEraKey(settings.data.selectedEra || DEFAULT_ERA_KEY);
+      currentEra = eraKey;
+      applyEraTokens(eraKey);
+      const label = getEraLabel(eraKey);
+      document.getElementById('current-era').textContent = label;
+      document.getElementById('approval-era').textContent = label;
+      console.log(`Current era: ${eraKey}`);
     } else {
       document.getElementById('current-era').textContent = 'Error loading';
     }
@@ -132,10 +274,16 @@ function setupEventListeners() {
 /* ---------------------- Era selection (US-1.3) ---------------------- */
 
 function initEraSelection() {
-  const eraOptions = Array.from(document.querySelectorAll('.era-card'));
+  const container = document.getElementById('era-options');
 
   // Initialize selection from settings (provided during popup init) or default
-  let initial = (currentEra && currentEra.toLowerCase()) || '90s';
+  let initial = normalizeEraKey(currentEra || DEFAULT_ERA_KEY);
+  const eraOptions = buildEraOptions(container, initial);
+
+  const availableKeys = eraOptions.map((btn) => btn.getAttribute('data-era'));
+  if (!availableKeys.includes(initial) && availableKeys.length) {
+    initial = availableKeys[0];
+  }
 
   eraOptions.forEach((btn) => {
     const era = btn.getAttribute('data-era').toLowerCase();
@@ -152,8 +300,10 @@ function initEraSelection() {
       setEraSelected(btn, true);
       // update currentEra display
       currentEra = btn.getAttribute('data-era');
-      document.getElementById('current-era').textContent = currentEra;
-      document.getElementById('approval-era').textContent = currentEra;
+      applyEraTokens(currentEra);
+      const label = getEraLabel(currentEra);
+      document.getElementById('current-era').textContent = label;
+      document.getElementById('approval-era').textContent = label;
     });
 
     // Keyboard navigation within the grid

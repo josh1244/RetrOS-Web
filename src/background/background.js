@@ -269,7 +269,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (typeof generateStyle !== 'undefined') {
         const request = {
           domain: message.payload.domain,
-          era: message.payload.era || 'Windows 95',
+          era: message.payload.era || 'win95',
           domDigest: message.payload.domDigest || 'unknown',
           feedback: message.payload.feedback
         };
