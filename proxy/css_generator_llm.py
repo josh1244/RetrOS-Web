@@ -82,6 +82,7 @@ def generate_css_with_llm(
         summary = reduce_dom(html)
         if summary.get("status") != "ok":
             raise CSSGenerationError(f"DOM reduction failed: {summary.get('error')}")
+        computed_digest = summary.get("digest", "")
         
         # Step 3: Format for prompt
         logger.debug("Formatting prompt...")
@@ -98,12 +99,12 @@ def generate_css_with_llm(
             token_output = generate_tokens(prompt, timeout_sec=timeout_sec)
         except TimeoutError:
             logger.warning("LLM inference timed out, using fallback")
-            cache_key = summary.get("digest", "")
+            cache_key = computed_digest
             elapsed = time.time() - start_time
             
             # Store feedback if provided
             if feedback and domain:
-                store_feedback(domain, era, feedback, dom_digest, cache_key)
+                store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
             
             return {
                 "status": "fallback",
@@ -114,15 +115,16 @@ def generate_css_with_llm(
                     "generation_ms": int((time.time() - start_time) * 1000),
                     "fallback": True,
                     "fallback_reason": "timeout",
+                    "dom_digest": cache_key,
                 },
             }
         except Exception as e:
             logger.error(f"LLM error: {e}")
-            cache_key = summary.get("digest", "")
+            cache_key = computed_digest
             
             # Store feedback if provided
             if feedback and domain:
-                store_feedback(domain, era, feedback, dom_digest, cache_key)
+                store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
             
             return {
                 "status": "fallback",
@@ -133,6 +135,7 @@ def generate_css_with_llm(
                     "generation_ms": int((time.time() - start_time) * 1000),
                     "fallback": True,
                     "fallback_reason": str(e)[:50],
+                    "dom_digest": cache_key,
                 },
             }
         
@@ -144,11 +147,11 @@ def generate_css_with_llm(
                 raise CSSGenerationError("No CSS rules generated")
         except Exception as e:
             logger.error(f"Token parsing failed: {e}")
-            cache_key = summary.get("digest", "")
+            cache_key = computed_digest
             
             # Store feedback if provided
             if feedback and domain:
-                store_feedback(domain, era, feedback, dom_digest, cache_key)
+                store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
             
             return {
                 "status": "fallback",
@@ -159,6 +162,7 @@ def generate_css_with_llm(
                     "generation_ms": int((time.time() - start_time) * 1000),
                     "fallback": True,
                     "fallback_reason": "parse_error",
+                    "dom_digest": cache_key,
                 },
             }
         
@@ -177,11 +181,11 @@ def generate_css_with_llm(
             valid, error_msg = validate_css(css_sanitized)
             if not valid:
                 logger.error("Sanitized CSS still invalid, using fallback")
-                cache_key = summary.get("digest", "")
+                cache_key = computed_digest
                 
                 # Store feedback if provided
                 if feedback and domain:
-                    store_feedback(domain, era, feedback, dom_digest, cache_key)
+                    store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
                 
                 return {
                     "status": "fallback",
@@ -192,17 +196,18 @@ def generate_css_with_llm(
                         "generation_ms": int((time.time() - start_time) * 1000),
                         "fallback": True,
                         "fallback_reason": "validation_failed",
+                        "dom_digest": cache_key,
                     },
                 }
             css = css_sanitized
         
         # Success!
         elapsed_ms = int((time.time() - start_time) * 1000)
-        cache_key = summary.get("digest", "")
+        cache_key = computed_digest
         
         # Store feedback if provided
         if feedback and domain:
-            store_feedback(domain, era, feedback, dom_digest, cache_key)
+            store_feedback(domain, era, feedback, dom_digest or cache_key, cache_key)
         
         logger.info(f"CSS generation complete in {elapsed_ms}ms")
         
@@ -216,6 +221,7 @@ def generate_css_with_llm(
                 "fallback": False,
                 "rules_count": len(rules),
                 "token_output_chars": len(token_output),
+                "dom_digest": cache_key,
             },
         }
     

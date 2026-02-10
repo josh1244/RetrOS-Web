@@ -7,6 +7,7 @@ This keeps prompt size small and generation fast.
 
 import logging
 import hashlib
+import json
 from bs4 import BeautifulSoup
 from typing import Dict, List, Any
 
@@ -45,6 +46,15 @@ def _estimate_layout(soup: BeautifulSoup) -> str:
         return "medium"
     else:
         return "dense"
+
+
+def _count_major_divs(soup: BeautifulSoup) -> int:
+    """Count divs that likely represent major layout containers."""
+    count = 0
+    for div in soup.find_all("div", recursive=True):
+        if div.get("id") or div.get("class") or div.get("role"):
+            count += 1
+    return count
 
 
 def reduce_dom(html: str, max_summary_lines: int = 100) -> Dict[str, Any]:
@@ -99,8 +109,19 @@ def reduce_dom(html: str, max_summary_lines: int = 100) -> Dict[str, Any]:
         if 'prefers-color-scheme' in html_lower or 'dark' in html_lower:
             has_dark_mode = True
         
-        # Compute digest of summary
-        summary_text = str(layout_summary) + str(element_types)
+        total_elements = len(soup.find_all())
+        div_count = _count_elements(soup, "div")
+        major_divs = _count_major_divs(soup)
+
+        # Compute deterministic fingerprint digest
+        fingerprint_payload = {
+            "layout_summary": layout_summary,
+            "element_types": element_types,
+            "total_elements": total_elements,
+            "divs": div_count,
+            "major_divs": major_divs,
+        }
+        summary_text = json.dumps(fingerprint_payload, sort_keys=True, separators=(",", ":"))
         digest = hashlib.sha256(summary_text.encode()).hexdigest()
         
         result = {
@@ -112,7 +133,9 @@ def reduce_dom(html: str, max_summary_lines: int = 100) -> Dict[str, Any]:
             "estimated_density": estimated_density,
             "has_dark_mode": has_dark_mode,
             "digest": digest,
-            "total_elements": len(soup.find_all()),
+            "total_elements": total_elements,
+            "divs": div_count,
+            "major_divs": major_divs,
         }
         
         logger.info(f"DOM reduced: {result['total_elements']} elements → {estimated_density} density")

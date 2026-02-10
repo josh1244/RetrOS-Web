@@ -156,27 +156,30 @@ def generate_style():
     domain = sanitized["domain"]
     era = sanitized["era"]
     dom_digest = sanitized.get("dom_digest", "")
+    if dom_digest in ["unknown", "none", "null"]:
+        dom_digest = ""
     feedback = sanitized.get("feedback")
     html_content = sanitized.get("html", "")
     
     logger.info(f"Generating style: domain={domain}, era={era}, dom_digest={dom_digest[:16] if dom_digest else 'none'}")
 
-    cached = get_cached_style(domain, era, dom_digest)
-    if cached:
-        metadata = cached.get("metadata", {})
-        metadata.update({
-            "domain": domain,
-            "era": era,
-            "cache_hit": True,
-            "cache_size_bytes": get_total_cache_size_bytes()
-        })
-        response = {
-            "status": "ok",
-            "css": cached.get("css", ""),
-            "metadata": metadata,
-            "cacheKey": metadata.get("cache_key") or build_cache_key(domain, era, dom_digest)
-        }
-        return jsonify(response), 200
+    if dom_digest:
+        cached = get_cached_style(domain, era, dom_digest)
+        if cached:
+            metadata = cached.get("metadata", {})
+            metadata.update({
+                "domain": domain,
+                "era": era,
+                "cache_hit": True,
+                "cache_size_bytes": get_total_cache_size_bytes()
+            })
+            response = {
+                "status": "ok",
+                "css": cached.get("css", ""),
+                "metadata": metadata,
+                "cacheKey": metadata.get("cache_key") or build_cache_key(domain, era, dom_digest)
+            }
+            return jsonify(response), 200
     
     # If no HTML provided, try to fetch it
     if not html_content:
@@ -208,12 +211,14 @@ def generate_style():
         result["metadata"]["generation_ms"] = generation_ms
         result["metadata"]["cache_hit"] = False
         
+        computed_digest = result.get("metadata", {}).get("dom_digest") or result.get("cache_key") or dom_digest
+
         # Generate cache key
-        cache_key = build_cache_key(domain, era, dom_digest)
+        cache_key = build_cache_key(domain, era, computed_digest)
         result["cacheKey"] = cache_key
 
         if result.get("css") and result["status"] in ["ok", "fallback"]:
-            metadata = save_cached_style(domain, era, result["css"], dom_digest)
+            metadata = save_cached_style(domain, era, result["css"], computed_digest)
             result["metadata"]["cache_saved"] = True
             result["metadata"]["cache_timestamp"] = metadata.get("timestamp")
             result["metadata"]["cache_size_bytes"] = get_total_cache_size_bytes()

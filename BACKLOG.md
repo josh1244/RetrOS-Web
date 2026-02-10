@@ -414,17 +414,18 @@ See `US-2.3-COMPLETION.md` for full implementation details.
 
 ---
 
-#### US-3.4: Cache Key Generation & Site Detection
+#### US-3.4: Cache Key Generation & Site Detection ([completion](US-3.4-COMPLETION.md))
 **Type:** Technical  
 **Story Points:** 13  
+**Status:** ✅ **COMPLETED**
 **Acceptance Criteria:**
-- [ ] Deterministic cache key based on DOM structure
-- [ ] Fingerprinting considers: element count, major divs, semantic structure
-- [ ] Same page generates same cache key
-- [ ] Minor layout changes detected as redesign
-- [ ] Cache key calculation < 100ms
-- [ ] Fingerprint collision testing (verify uniqueness)
-- [ ] Algorithm documented
+- [x] Deterministic cache key based on DOM structure
+- [x] Fingerprinting considers: element count, major divs, semantic structure
+- [x] Same page generates same cache key
+- [x] Minor layout changes detected as redesign
+- [x] Cache key calculation < 100ms
+- [x] Fingerprint collision testing (verify uniqueness)
+- [x] Algorithm documented
 
 **Tasks:**
 - Design fingerprinting algorithm
